@@ -1,0 +1,9 @@
+language: python
+python: "2.7"
+before_script:
+  - pip install nose
+script:
+  - nosetests -v -s tests
+after_script:
+  - pip install flake8 hacking
+  - flake8 apc_od tests

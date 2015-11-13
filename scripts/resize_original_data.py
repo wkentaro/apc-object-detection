@@ -18,9 +18,8 @@ if not os.path.exists(os.path.join(here, 'resized')):
 
 
 raw_files = load_files('resized/raw', shuffle=False, load_content=False)
-mask_files = load_files('resized/raw', shuffle=False, load_content=False)
+mask_files = load_files('resized/mask', shuffle=False, load_content=False)
 for rf, mf in zip(raw_files.filenames, mask_files.filenames):
-    assert os.path.basename(rf) == os.path.basename(mf)
     raw_img = imread(rf)
     raw_img = resize(raw_img, (712, 1068))
     imsave(rf, raw_img)

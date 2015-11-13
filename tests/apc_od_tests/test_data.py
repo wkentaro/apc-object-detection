@@ -17,3 +17,15 @@ def test_get_original():
     for i in xrange(N):
         testing.assert_equal_path_basename(raw_data.filenames[i],
                                            mask_data.filenames[i])
+
+
+def test_get_resized():
+    raw_data = apc_od.get_resized('raw')
+    mask_data = apc_od.get_resized('mask')
+
+    N = len(raw_data.filenames)
+    assert_equal(N, len(mask_data.filenames))
+
+    for i in xrange(N):
+        testing.assert_equal_path_basename(raw_data.filenames[i],
+                                           mask_data.filenames[i])

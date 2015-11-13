@@ -38,4 +38,4 @@ class CAE(FunctionSet):
         h = self.unpool4(h)
         h = self.deconv4(h)
 
-        return h
+        return F.mean_squared_error(x, h), h

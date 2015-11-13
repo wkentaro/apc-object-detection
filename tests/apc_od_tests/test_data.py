@@ -1,31 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from nose.tools import assert_equal
+from nose.tools import assert_almost_equal
 
 import apc_od
 from apc_od import testing
 
 
-def test_get_original():
-    raw_data = apc_od.get_original('raw')
-    mask_data = apc_od.get_original('mask')
+def test_get_raw():
+    train_data = apc_od.get_raw('train')
+    test_data = apc_od.get_raw('test')
 
-    N = len(raw_data.filenames)
-    assert_equal(N, len(mask_data.filenames))
+    N_train = len(train_data.filenames)
+    N_test = len(test_data.filenames)
 
-    for i in xrange(N):
-        testing.assert_equal_path_basename(raw_data.filenames[i],
-                                           mask_data.filenames[i])
-
-
-def test_get_resized():
-    raw_data = apc_od.get_resized('raw')
-    mask_data = apc_od.get_resized('mask')
-
-    N = len(raw_data.filenames)
-    assert_equal(N, len(mask_data.filenames))
-
-    for i in xrange(N):
-        testing.assert_equal_path_basename(raw_data.filenames[i],
-                                           mask_data.filenames[i])
+    assert_almost_equal(int(N_train / 0.8), int(N_test / 0.2))

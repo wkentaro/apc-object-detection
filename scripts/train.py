@@ -19,7 +19,7 @@ from draw_loss import draw_loss_curve
 
 
 here = osp.dirname(osp.abspath(__file__))
-TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%s')
+TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 LOG_DIR = osp.join(here, '../logs/{}_unsupervised_train'.format(TIMESTAMP))
 os.mkdir(LOG_DIR)
 

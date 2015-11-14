@@ -1,9 +1,31 @@
+sudo: false
+
 language: python
-python: "2.7"
-before_script:
-  - pip install nose
-script:
-  - nosetests -v -s tests
-after_script:
+
+addons:
+  apt:
+    packages:
+      - gfortran
+      - libatlas-dev
+      - libatlas-base-dev
+      - liblapack-dev
+
+python:
+  - 2.7
+
+before_install:
+  - pip install -U pip wheel setuptools
+
+install:
+  - pip install numpy nose six matplotlib
+  - pip install scipy
+  - pip install scikit-image scikit-learn
   - pip install flake8 hacking
-  - flake8 apc_od tests
+
+script:
+  - flake8 apc_od scripts tests
+  - nosetests -v -s tests
+
+cache:
+  directories:
+    - $HOME/.cache/pip

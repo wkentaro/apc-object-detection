@@ -15,13 +15,11 @@ python:
 
 before_install:
   - pip install -U pip wheel setuptools
+  - pip install -U -v numpy scipy
 
 install:
-  - pip install numpy nose six matplotlib
-  - pip install scipy
-  - pip install scikit-image scikit-learn
-  - pip install flake8 hacking
-  - pip install gdown
+  - pip install -r requirements.txt
+  - pip install flake8 nose gdown
 
 before_script:
   - gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vWU9QRjdocktoU1U&export=download" -O data/raw_data.tgz

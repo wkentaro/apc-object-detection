@@ -1,14 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import argparse
 import re
-import sys
-import matplotlib
-if sys.platform in ['linux', 'linux2']:
-    matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 import numpy as np
-import argparse
 
 
 def draw_loss_curve(logfile, outfile, no_acc):
@@ -19,20 +16,22 @@ def draw_loss_curve(logfile, outfile, no_acc):
         test_acc = []
     for line in open(logfile):
         line = line.strip()
-        if not 'epoch:' in line:
+        if 'epoch:' not in line:
             continue
         epoch = int(re.search('epoch:([0-9]+)', line).groups()[0])
         if 'train' in line:
             tr_l = float(re.search('loss=(.+),', line).groups()[0])
             train_loss.append([epoch, tr_l])
             if not no_acc:
-                tr_a = float(re.search('accuracy=([0-9\.]+)', line).groups()[0])
+                tr_a = float(re.search('accuracy=([0-9\.]+)', line)
+                             .groups()[0])
                 train_acc.append([epoch, tr_a])
         if 'test' in line:
             te_l = float(re.search('loss=(.+),', line).groups()[0])
             test_loss.append([epoch, te_l])
             if not no_acc:
-                te_a = float(re.search('accuracy=([0-9\.]+)', line).groups()[0])
+                te_a = float(re.search('accuracy=([0-9\.]+)', line)
+                             .groups()[0])
                 test_acc.append([epoch, te_a])
 
     train_loss = np.asarray(train_loss)
@@ -54,7 +53,7 @@ def draw_loss_curve(logfile, outfile, no_acc):
     if not no_acc:
         ax2 = ax1.twinx()
         ax2.plot(train_acc[:, 0], train_acc[:, 1],
-                label='training accuracy', c='r')
+                 label='training accuracy', c='r')
         ax2.plot(test_acc[:, 0], test_acc[:, 1], label='test accuracy', c='c')
         ax2.set_xlim([1, len(train_loss)])
         ax2.set_ylabel('accuracy')

@@ -19,7 +19,7 @@ from draw_loss import draw_loss_curve
 
 
 here = osp.dirname(osp.abspath(__file__))
-TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%s')
+TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 LOG_DIR = osp.join(here, '../logs/{}_unsupervised_train'.format(TIMESTAMP))
 os.mkdir(LOG_DIR)
 
@@ -27,8 +27,11 @@ log_file = osp.join(LOG_DIR, 'log.txt')
 logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
     filename=log_file,
+    level=logging.DEBUG,
 )
-print('logging to {}'.format(log_file))
+msg = 'logging at {}'.format(TIMESTAMP)
+logging.info(msg)
+print(msg)
 
 ON_GPU = True
 
@@ -100,12 +103,12 @@ def main():
         sum_loss, model, x_hat = train(dataset, model)
 
         # logging
-        msg = 'epoch:{:02d}\ttrain mean loss={}'.format(epoch, sum_loss / N)
+        msg = 'epoch:{:02d};\ttrain mean loss={};'.format(epoch, sum_loss / N)
         logging.info(msg)
         print(msg)
 
         if epoch % save_interval == 0:
-            print('epoch:{:02d}\tsaving model and x_hat'.format(epoch))
+            print('epoch:{:02d};\tsaving model and x_hat'.format(epoch))
             model_path = osp.join(
                 LOG_DIR, 'CAE_{}.chainermodel.pkl'.format(epoch))
             with open(model_path, 'wb') as f:

@@ -4,7 +4,6 @@
 from nose.tools import assert_almost_equal
 
 import apc_od
-from apc_od import testing
 
 
 def test_get_raw():

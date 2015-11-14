@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from chainer import Variable, FunctionSet
 import chainer.functions as F
+from chainer import FunctionSet
+from chainer import Variable
 
 
 class CAE(FunctionSet):

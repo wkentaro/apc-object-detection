@@ -27,8 +27,11 @@ log_file = osp.join(LOG_DIR, 'log.txt')
 logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
     filename=log_file,
+    level=logging.DEBUG,
 )
-print('logging to {}'.format(log_file))
+msg = 'logging at {}'.format(TIMESTAMP)
+logging.info(msg)
+print(msg)
 
 ON_GPU = True
 

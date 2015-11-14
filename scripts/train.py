@@ -103,12 +103,12 @@ def main():
         sum_loss, model, x_hat = train(dataset, model)
 
         # logging
-        msg = 'epoch:{:02d}\ttrain mean loss={}'.format(epoch, sum_loss / N)
+        msg = 'epoch:{:02d};\ttrain mean loss={};'.format(epoch, sum_loss / N)
         logging.info(msg)
         print(msg)
 
         if epoch % save_interval == 0:
-            print('epoch:{:02d}\tsaving model and x_hat'.format(epoch))
+            print('epoch:{:02d};\tsaving model and x_hat'.format(epoch))
             model_path = osp.join(
                 LOG_DIR, 'CAE_{}.chainermodel.pkl'.format(epoch))
             with open(model_path, 'wb') as f:

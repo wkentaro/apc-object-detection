@@ -14,6 +14,7 @@ import numpy as np
 from skimage.transform import resize
 
 from apc_od import get_raw
+from apc_od import im_to_blob
 from apc_od.models import CAE
 from draw_loss import draw_loss_curve
 
@@ -25,18 +26,6 @@ def im_preprocess(im):
     shape = np.array(im.shape[:2]) // 2
     im = resize(im, shape, preserve_range=True)
     return im
-
-
-def im_to_blob(im):
-    """Convert image to blob.
-
-    @param im: its shape is (height, width, channel)
-    @type im: numpy.ndarray
-    """
-    blob = im.transpose((2, 0, 1))
-    blob = blob.astype(np.float32)
-    blob /= 255.
-    return blob
 
 
 class UnsupervisedTrain(object):

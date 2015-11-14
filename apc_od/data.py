@@ -1,17 +1,28 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
-from sklearn.datasets import load_files
+import numpy as np
 
 
-here = os.path.dirname(os.path.abspath(__file__))
+def im_to_blob(im):
+    """Convert image to blob.
+
+    @param im: its shape is (height, width, channel)
+    @type im: numpy.ndarray
+    """
+    blob = im.transpose((2, 0, 1))
+    blob = blob.astype(np.float32)
+    blob /= 255.
+    return blob
 
 
-def get_raw(which_set):
-    if which_set not in ('train', 'test'):
-        raise ValueError
+def blob_to_im(blob):
+    """Convert blob to image.
 
-    data_dir = os.path.join(here, '../data/raw_{0}'.format(which_set))
-    data = load_files(data_dir, load_content=False, shuffle=False)
-    return data
+    @param blob: its shape is (channel, height, width)
+    @type blob: numpy.ndarray
+    """
+    im = blob * 255.
+    im = im.transpose((1, 2, 0))
+    im = im.astype(np.uint8)
+    return im

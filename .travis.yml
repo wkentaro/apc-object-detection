@@ -21,6 +21,11 @@ install:
   - pip install scipy
   - pip install scikit-image scikit-learn
   - pip install flake8 hacking
+  - pip install gdown
+
+before_script:
+  - gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vWU9QRjdocktoU1U&export=download" -O data/raw_data.tgz
+  - (cd data && tar zxf raw_data.tgz && mv raw_data/* .)
 
 script:
   - flake8 apc_od scripts tests

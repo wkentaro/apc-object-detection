@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from . import cae
+from apc_od.models import cae
 
 
 CAE = cae.CAE

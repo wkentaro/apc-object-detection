@@ -8,8 +8,6 @@ import cv2
 import numpy as np
 from sklearn.datasets import load_files
 
-import apc_od
-
 
 def compute_mean_img(imgs):
     return np.mean(imgs, axis=0)

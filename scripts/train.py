@@ -86,18 +86,21 @@ class UnsupervisedTrain(object):
 
     def main_loop(self, n_epoch=10, save_interval=None):
         save_interval = save_interval or (n_epoch // 10)
-        dataset = get_raw(which_set='train')
-        N = len(dataset.filenames)
+        train_data = get_raw(which_set='train')
+        test_data = get_raw(which_set='test')
+        N_train = len(train_data.filenames)
+        N_test = len(test_data.filenames)
         for epoch in xrange(0, n_epoch):
-            sum_loss, x_hat = self.batch_loop(dataset, train=True)
+            # train
+            sum_loss, x_hat = self.batch_loop(train_data, train=True)
             # logging
-            msg = ('epoch:{:02d};\ttrain mean loss={};'
-                   .format(epoch, sum_loss / N))
+            msg = ('epoch:{:02d}; train mean loss={};'
+                   .format(epoch, sum_loss / N_train))
             logging.info(msg)
             print(msg)
             # save
             if epoch % save_interval == 0:
-                print('epoch:{:02d};\tsaving model and x_hat'.format(epoch))
+                print('epoch:{:02d}; saving model and x_hat'.format(epoch))
                 model_path = osp.join(
                     self.log_dir, 'CAE_{}.chainermodel.pkl'.format(epoch))
                 with open(model_path, 'wb') as f:
@@ -106,6 +109,14 @@ class UnsupervisedTrain(object):
                     self.log_dir, 'x_hat_{}.pkl'.format(epoch))
                 with open(x_hat_path, 'wb') as f:
                     pickle.dump(x_hat.data, f)
+
+            # test
+            sum_loss, _ = self.batch_loop(test_data, train=False)
+            # logging
+            msg = ('epoch:{:02d}; test mean loss={};'
+                   .format(epoch, sum_loss / N_test))
+            logging.info(msg)
+            print(msg)
         draw_loss_curve(self.log_file,
                         osp.join(self.log_dir, 'loss_curve.jpg'),
                         no_acc=True)

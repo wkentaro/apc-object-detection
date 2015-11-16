@@ -1,3 +1,6 @@
+[run]
+omit = apc_od/imaging.py
+
 [report]
 omit =
   */python?.?/*

@@ -16,10 +16,13 @@ python:
 before_install:
   - pip install -U pip wheel setuptools
   - pip install -U -v numpy scipy
+  - pip install flake8 nose gdown coveralls
+  - pip install -r requirements.txt
+  - git clone https://github.com/wkentaro/chainer.git -b develop
+  - (cd chainer && python setup.py develop)
 
 install:
-  - pip install -r requirements.txt
-  - pip install flake8 nose gdown coveralls
+  - python setup.py develop
 
 before_script:
   - gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vWU9QRjdocktoU1U&export=download" -O data/raw_data.tgz

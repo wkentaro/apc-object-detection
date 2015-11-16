@@ -94,7 +94,7 @@ class UnsupervisedTrain(object):
             logging.info(msg)
             print(msg)
             # save
-            if epoch % save_interval == 0:
+            if epoch % save_interval == (save_interval - 1):
                 print('epoch:{:02d}; saving'.format(epoch))
                 model_path = osp.join(
                     self.log_dir, 'CAE_{}.chainermodel.pkl'.format(epoch))

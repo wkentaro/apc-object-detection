@@ -1,7 +1,5 @@
-[run]
-omit = apc_od/imaging.py
-
 [report]
 omit =
+  */apc_od/imaging.py
   */python?.?/*
   */site-packages/nose/*

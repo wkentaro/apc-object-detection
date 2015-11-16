@@ -4,9 +4,9 @@
 import argparse
 import pickle
 
-import cv2
 from chainer import cuda
 import cupy
+import cv2
 import numpy as np
 
 from apc_od import blob_to_im

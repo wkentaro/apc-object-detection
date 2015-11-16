@@ -6,6 +6,9 @@ import apc_od.dataset
 import apc_od.imaging
 
 
+__version__ = '0.1'
+
+
 im_to_blob = apc_od.data.im_to_blob
 blob_to_im = apc_od.data.blob_to_im
 

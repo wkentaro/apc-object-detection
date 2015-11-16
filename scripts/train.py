@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import argparse
 import datetime
 import logging
 import os
@@ -121,6 +122,16 @@ class UnsupervisedTrain(object):
                         no_acc=True)
 
 
-if __name__ == '__main__':
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--epoch', type=int, default=50)
+    args = parser.parse_args()
+
+    n_epoch = args.epoch
+
     app = UnsupervisedTrain()
-    app.main_loop(n_epoch=50)
+    app.main_loop(n_epoch=n_epoch)
+
+
+if __name__ == '__main__':
+    main()

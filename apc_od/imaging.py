@@ -1,4 +1,5 @@
-import sys
+# Original work: pylearn2.packaged_dependencies.theano_linear.imaging
+
 import numpy
 from six.moves import xrange
 from PIL import Image

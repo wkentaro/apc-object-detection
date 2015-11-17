@@ -19,6 +19,7 @@ from apc_od import im_to_blob
 from apc_od.models import CAE
 from draw_loss import draw_loss_curve
 from tile_ae_inout import tile_ae_inout
+from tile_ae_encoded import tile_ae_encoded
 
 
 here = osp.dirname(osp.abspath(__file__))
@@ -109,6 +110,9 @@ class UnsupervisedTrain(object):
                     pickle.dump(x_hat.data, f)  # save x_hat
                 tile_ae_inout(x, x_hat.data,
                               osp.join(self.log_dir, 'X_{}.jpg'.format(epoch)))
+                tile_ae_encoded(
+                    self.model, x,
+                    osp.join(self.log_dir, 'x_encoded_{}.jpg'.format(epoch)))
 
             # test
             sum_loss, _, _ = self.batch_loop(test_data, train=False)

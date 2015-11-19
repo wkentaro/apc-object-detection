@@ -35,4 +35,5 @@ def test_cae_decode():
     x = np.array([im_to_blob(img)])
 
     model = CAE()
-    model.decode(x)
+    h = model.encode(x)
+    model.decode(h.data)

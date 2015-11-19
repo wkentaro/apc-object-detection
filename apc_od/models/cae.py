@@ -17,9 +17,16 @@ class CAE(FunctionSet):
 
     def forward(self, x_data, train=True):
         x = Variable(x_data, volatile=not train)
-
         h = self.conv1(x)
-
         h = self.deconv2(h)
-
         return F.mean_squared_error(x, h), h
+
+    def encode(self, x_data, train=True):
+        x = Variable(x_data, volatile=not train)
+        h = self.conv1(x)
+        return h
+
+    def decode(self, x_data, train=True):
+        x = Variable(x_data, volatile=not train)
+        h = self.deconv1(x)
+        return h

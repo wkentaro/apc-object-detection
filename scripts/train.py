@@ -128,7 +128,8 @@ class UnsupervisedTrain(object):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epoch', type=int, default=50)
+    parser.add_argument('--epoch', type=int, default=50,
+                        help='Number of recursion (default: 50)')
     args = parser.parse_args()
 
     n_epoch = args.epoch

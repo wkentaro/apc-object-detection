@@ -5,7 +5,6 @@ import argparse
 import os.path as osp
 import pickle
 
-from chainer import Variable
 from chainer import cuda
 import cv2
 import numpy as np
@@ -15,8 +14,7 @@ from apc_od.imaging import tile_slices_to_image
 
 def tile_ae_encoded(model, x, filename):
     x = cuda.to_gpu(x)
-    x = Variable(x, volatile=True)
-    h = model.conv1(x)
+    h = model.encode(x)
     for i, hi in enumerate(cuda.to_cpu(h.data)):
         tile_img = np.array(tile_slices_to_image(hi))
         base, ext = osp.splitext(filename)

@@ -18,8 +18,8 @@ from apc_od import get_raw
 from apc_od import im_to_blob
 from apc_od.models import CAE
 from draw_loss import draw_loss_curve
-from tile_ae_inout import tile_ae_inout
 from tile_ae_encoded import tile_ae_encoded
+from tile_ae_inout import tile_ae_inout
 
 
 here = osp.dirname(osp.abspath(__file__))
@@ -128,7 +128,8 @@ class UnsupervisedTrain(object):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epoch', type=int, default=50)
+    parser.add_argument('--epoch', type=int, default=50,
+                        help='Number of recursion (default: 50)')
     args = parser.parse_args()
 
     n_epoch = args.epoch

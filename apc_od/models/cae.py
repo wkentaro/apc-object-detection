@@ -28,5 +28,5 @@ class CAE(FunctionSet):
 
     def decode(self, x_data, train=True):
         x = Variable(x_data, volatile=not train)
-        h = self.deconv1(x)
+        h = self.deconv2(x)
         return h

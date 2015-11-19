@@ -7,6 +7,7 @@ import logging
 import os
 import os.path as osp
 import pickle
+import sys
 
 from chainer import cuda
 from chainer import optimizers
@@ -17,6 +18,7 @@ from skimage.transform import resize
 from apc_od import get_raw
 from apc_od import im_to_blob
 from apc_od.models import CAE
+from apc_od.models import CAEPool
 from draw_loss import draw_loss_curve
 from tile_ae_encoded import tile_ae_encoded
 from tile_ae_inout import tile_ae_inout
@@ -33,24 +35,12 @@ def im_preprocess(im):
 
 class UnsupervisedTrain(object):
 
-    def __init__(self, on_gpu=True):
+    def __init__(self, model, log_dir, log_file, on_gpu):
+        self.model = model
+        self.log_dir = log_dir
+        self.log_file = log_file
         self.on_gpu = on_gpu
-        self.timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-        # setup for logging
-        self.log_dir = osp.join(
-            here, '../logs/{}_unsupervised_train'.format(self.timestamp))
-        os.mkdir(self.log_dir)
-        self.log_file = osp.join(self.log_dir, 'log.txt')
-        logging.basicConfig(
-            format='%(asctime)s [%(levelname)s] %(message)s',
-            filename=self.log_file,
-            level=logging.DEBUG,
-        )
-        msg = 'logging at {}'.format(self.timestamp)
-        logging.info(msg)
-        print(msg)
-        # model
-        self.model = CAE()
+        # setup model on gpu
         if self.on_gpu:
             self.model.to_gpu()
         # optimizer
@@ -129,12 +119,41 @@ class UnsupervisedTrain(object):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--epoch', type=int, default=50,
-                        help='Number of recursion (default: 50)')
+                        help='number of recursion (default: 50)')
+    parser.add_argument('--model', type=str, default='CAE',
+                        help='name of model (default: CAE)')
     args = parser.parse_args()
 
-    n_epoch = args.epoch
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    # setup for logging
+    log_dir = osp.join(here, '../logs/{}_{}'.format(timestamp, args.model))
+    os.mkdir(log_dir)
+    log_file = osp.join(log_dir, 'log.txt')
+    logging.basicConfig(
+        format='%(asctime)s [%(levelname)s] %(message)s',
+        filename=log_file,
+        level=logging.DEBUG,
+    )
+    logging.info('args: {};'.format(args))
+    msg = 'logging in {};'.format(log_dir)
+    logging.info(msg)
+    print(msg)
 
-    app = UnsupervisedTrain()
+    n_epoch = args.epoch
+    if args.model == 'CAE':
+        model = CAE()
+    elif args.model == 'CAEPool':
+        model = CAEPool()
+    else:
+        sys.stderr.write('Unsupported model: {}'.format(args.model))
+        sys.exit(1)
+
+    app = UnsupervisedTrain(
+        model=model,
+        log_dir=log_dir,
+        log_file=log_file,
+        on_gpu=True
+    )
     app.main_loop(n_epoch=n_epoch)
 
 

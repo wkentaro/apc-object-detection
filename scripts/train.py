@@ -18,8 +18,8 @@ from apc_od import get_raw
 from apc_od import im_to_blob
 from apc_od.models import CAE
 from draw_loss import draw_loss_curve
-from tile_ae_inout import tile_ae_inout
 from tile_ae_encoded import tile_ae_encoded
+from tile_ae_inout import tile_ae_inout
 
 
 here = osp.dirname(osp.abspath(__file__))

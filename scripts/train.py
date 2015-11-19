@@ -78,17 +78,24 @@ class UnsupervisedTrain(object):
         N_test = len(test_data.filenames)
         for epoch in xrange(0, n_epoch):
             # train
-            sum_loss, x, x_hat = self.batch_loop(train_data, train=True)
+            sum_loss, _, _ = self.batch_loop(train_data, train=True)
             # logging
             msg = ('epoch:{:02d}; train mean loss={};'
                    .format(epoch, sum_loss / N_train))
             logging.info(msg)
             print(msg)
-            # save
+            # test
+            sum_loss, x, x_hat = self.batch_loop(test_data, train=False)
+            # logging
+            msg = ('epoch:{:02d}; test mean loss={};'
+                   .format(epoch, sum_loss / N_test))
+            logging.info(msg)
+            print(msg)
+            # save model and input/encoded/decoded
             if epoch % save_interval == (save_interval - 1):
                 print('epoch:{:02d}; saving'.format(epoch))
                 model_path = osp.join(
-                    self.log_dir, 'CAE_{}.chainermodel.pkl'.format(epoch))
+                    self.log_dir, 'chainermodel_{}.pkl'.format(epoch))
                 with open(model_path, 'wb') as f:
                     pickle.dump(self.model, f)  # save model
                 x_path = osp.join(self.log_dir, 'x_{}.pkl'.format(epoch))
@@ -104,13 +111,6 @@ class UnsupervisedTrain(object):
                     self.model, x,
                     osp.join(self.log_dir, 'x_encoded_{}.jpg'.format(epoch)))
 
-            # test
-            sum_loss, _, _ = self.batch_loop(test_data, train=False)
-            # logging
-            msg = ('epoch:{:02d}; test mean loss={};'
-                   .format(epoch, sum_loss / N_test))
-            logging.info(msg)
-            print(msg)
         draw_loss_curve(self.log_file,
                         osp.join(self.log_dir, 'loss_curve.jpg'),
                         no_acc=True)

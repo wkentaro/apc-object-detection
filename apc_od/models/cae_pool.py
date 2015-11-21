@@ -11,10 +11,10 @@ class CAEPool(FunctionSet):
 
     def __init__(self):
         super(CAEPool, self).__init__(
-            conv1=F.Convolution2D(3, 64, 2),
-            pool1=F.MaxPooling2D(2),
-            unpool2=F.Unpooling2D(2),
-            deconv2=F.Deconvolution2D(64, 3, 2),
+            conv1=F.Convolution2D(in_channels=3, out_channels=64, ksize=2),
+            pool1=F.MaxPooling2D(ksize=2, stride=1),
+            unpool2=F.Unpooling2D(ksize=2, stride=1),
+            deconv2=F.Deconvolution2D(in_channels=64, out_channels=3, ksize=2),
         )
 
     def forward(self, x_data, train=True):

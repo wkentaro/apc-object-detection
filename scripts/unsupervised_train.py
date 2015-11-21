@@ -18,7 +18,6 @@ from skimage.transform import resize
 from apc_od import get_raw
 from apc_od import im_to_blob
 from apc_od.models import CAE
-from apc_od.models import CAEPool
 from draw_loss import draw_loss_curve
 from tile_ae_encoded import tile_ae_encoded
 from tile_ae_inout import tile_ae_inout
@@ -142,8 +141,6 @@ def main():
     n_epoch = args.epoch
     if args.model == 'CAE':
         model = CAE()
-    elif args.model == 'CAEPool':
-        model = CAEPool()
     else:
         sys.stderr.write('Unsupported model: {}'.format(args.model))
         sys.exit(1)

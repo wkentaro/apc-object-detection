@@ -14,5 +14,4 @@ Setup
 
 ::
 
-  source setup.zsh
-
+  python setup.py develop --user

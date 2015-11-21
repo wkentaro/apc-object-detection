@@ -10,7 +10,7 @@ from apc_od import im_to_blob
 from apc_od.models import CAEPool
 
 
-def test_cae_train():
+def test_cae_pool_train():
     img = astronaut()
     x_data = np.array([im_to_blob(img)])
 
@@ -23,7 +23,7 @@ def test_cae_train():
     loss.backward()
 
 
-def test_cae_encode():
+def test_cae_pool_encode():
     img = astronaut()
     x_data = np.array([im_to_blob(img)])
     x = Variable(x_data, True)
@@ -32,7 +32,7 @@ def test_cae_encode():
     model.encode(x)
 
 
-def test_cae_decode():
+def test_cae_pool_decode():
     img = astronaut()
     x_data = np.array([im_to_blob(img)])
     x = Variable(x_data, True)

@@ -26,3 +26,13 @@ def blob_to_im(blob):
     im = im.transpose((1, 2, 0))
     im = im.astype(np.uint8)
     return im
+
+
+def snack():
+    here = osp.dirname(osp.abspath(__file__))
+    return imread(osp.join(here, 'data/snack.jpg'))
+
+
+def doll():
+    here = osp.dirname(osp.abspath(__file__))
+    return imread(osp.join(here, 'data/doll.jpg'))

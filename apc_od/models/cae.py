@@ -1,30 +1,30 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import chainer
 import chainer.functions as F
-from chainer import FunctionSet
-from chainer import Variable
+import chainer.links as L
 
 
-class CAE(FunctionSet):
+class CAE(chainer.Chain):
     """Convolutional Auto Encoder"""
 
     def __init__(self):
         super(CAE, self).__init__(
-            conv1=F.Convolution2D(3, 64, 2, stride=1, pad=1),
-            deconv2=F.Deconvolution2D(64, 3, 2, stride=1, pad=1),
+            conv1=L.Convolution2D(3, 64, 2, stride=1, pad=1),
+            deconv2=L.Deconvolution2D(64, 3, 2, stride=1, pad=1),
         )
+        self.y = None
+        self.loss = None
 
-    def forward(self, x_data, train=True):
-        x = Variable(x_data, volatile=not train)
+    def __call__(self, x):
         h = self.encode(x)
-        h = self.decode(h)
-        return F.mean_squared_error(x, h), h
+        self.y = self.decode(h)
+        self.loss = F.mean_squared_error(x, self.y)
+        return self.loss, self.y
 
     def encode(self, x):
-        h = self.conv1(x)
-        return h
+        return self.conv1(x)
 
     def decode(self, x):
-        h = self.deconv2(x)
-        return h
+        return self.deconv2(x)

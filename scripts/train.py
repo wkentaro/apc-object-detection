@@ -15,8 +15,8 @@ from chainer import serializers
 from chainer import Variable
 import cv2
 import numpy as np
-from skimage.transform import resize
 
+from apc_od import im_preprocess
 from apc_od import get_raw
 from apc_od import im_to_blob
 from apc_od.models import CAE
@@ -27,12 +27,6 @@ from tile_ae_inout import tile_ae_inout
 
 
 here = osp.dirname(osp.abspath(__file__))
-
-
-def im_preprocess(im):
-    shape = np.array(im.shape[:2]) // 2
-    im = resize(im, shape, preserve_range=True)
-    return im
 
 
 class UnsupervisedTrain(object):

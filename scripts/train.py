@@ -10,7 +10,8 @@ import pickle
 import sys
 
 from chainer import cuda
-from chainer import optimizers
+from chainer import optimizers as O
+from chainer import serializers
 import cv2
 import numpy as np
 from skimage.transform import resize
@@ -36,7 +37,6 @@ def im_preprocess(im):
 class UnsupervisedTrain(object):
 
     def __init__(self, model, log_dir, log_file, on_gpu):
-        self.model = model
         self.log_dir = log_dir
         self.log_file = log_file
         self.on_gpu = on_gpu
@@ -44,7 +44,7 @@ class UnsupervisedTrain(object):
         if self.on_gpu:
             self.model.to_gpu()
         # optimizer
-        self.optimizer = optimizers.Adam(alpha=0.001)
+        self.optimizer = O.Adam(alpha=0.001)
         self.optimizer.setup(self.model)
 
     def batch_loop(self, dataset, train, batch_size=10):

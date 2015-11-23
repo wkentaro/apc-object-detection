@@ -11,7 +11,6 @@ import sys
 
 from chainer import cuda
 from chainer import optimizers
-from chainer import Variable
 import cv2
 import numpy as np
 from skimage.transform import resize
@@ -61,7 +60,7 @@ class UnsupervisedTrain(object):
             if self.on_gpu:
                 x_batch = cuda.to_gpu(x_batch.astype(np.float32))
             self.optimizer.zero_grads()
-            loss, x_hat = self.model.forward(x_batch, train=train)
+            loss, x_hat = self.model(x_batch, train=train)
             loss.backward()
             self.optimizer.update()
             sum_loss += float(loss.data)

@@ -13,14 +13,16 @@ from apc_od.models import CAE
 def test_cae_train():
     img = astronaut()
     x = np.array([im_to_blob(img)])
+    x = Variable(x)
 
     model = CAE()
     optimizer = optimizers.Adam()
     optimizer.setup(model)
 
     optimizer.zero_grads()
-    loss, x_hat = model.forward(x)
+    loss, x_hat = model(x)
     loss.backward()
+    optimizer.update()
 
 
 def test_cae_encode():

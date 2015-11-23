@@ -19,8 +19,11 @@ before_install:
   - pip install -U -v numpy scipy
   - pip install flake8 nose gdown coveralls
   - pip install -r requirements.txt
+  # install chainer from source
+  - cd /tmp
   - git clone https://github.com/wkentaro/chainer.git -b develop
   - (cd chainer && python setup.py develop)
+  - cd $TRAVIS_BUILD_DIR
 
 install:
   - python setup.py develop

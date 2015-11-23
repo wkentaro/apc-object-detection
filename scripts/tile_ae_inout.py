@@ -4,8 +4,6 @@
 import argparse
 import pickle
 
-from chainer import cuda
-import cupy
 import cv2
 import numpy as np
 

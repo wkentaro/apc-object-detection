@@ -14,11 +14,6 @@ from apc_od import tile_slices_to_image_uint8
 
 
 def tile_ae_inout(x, x_hat, output_file):
-    if isinstance(x, cupy.ndarray):
-        x = cuda.to_cpu(x)
-    if isinstance(x_hat, cupy.ndarray):
-        x_hat = cuda.to_cpu(x_hat)
-
     X = np.vstack((x, x_hat))
 
     # tile images

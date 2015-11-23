@@ -11,6 +11,7 @@ import sys
 
 from chainer import cuda
 from chainer import optimizers
+from chainer import Variable
 import cv2
 import numpy as np
 from skimage.transform import resize
@@ -18,6 +19,7 @@ from skimage.transform import resize
 from apc_od import get_raw
 from apc_od import im_to_blob
 from apc_od.models import CAE
+from apc_od.models import CAEPool
 from draw_loss import draw_loss_curve
 from tile_ae_encoded import tile_ae_encoded
 from tile_ae_inout import tile_ae_inout
@@ -63,11 +65,11 @@ class UnsupervisedTrain(object):
             loss.backward()
             self.optimizer.update()
             sum_loss += float(loss.data)
-        x_last = np.array([
-            im_to_blob(im_preprocess(cv2.imread(f)))
-            for f in files[perm[i:i + batch_size]]
-        ])
-        return sum_loss, x_last, x_hat
+        x_hat_data = x_hat.data
+        if self.on_gpu:
+            x_batch = cuda.to_cpu(x_batch)
+            x_hat_data = cuda.to_cpu(x_hat_data)
+        return sum_loss, x_batch, x_hat_data
 
     def main_loop(self, n_epoch=10, save_interval=None):
         save_interval = save_interval or (n_epoch // 10)
@@ -103,11 +105,11 @@ class UnsupervisedTrain(object):
                 x_hat_path = osp.join(
                     self.log_dir, 'x_hat_{}.pkl'.format(epoch))
                 with open(x_hat_path, 'wb') as f:
-                    pickle.dump(x_hat.data, f)  # save x_hat
-                tile_ae_inout(x, x_hat.data,
+                    pickle.dump(x_hat, f)  # save x_hat
+                tile_ae_inout(x, x_hat,
                               osp.join(self.log_dir, 'X_{}.jpg'.format(epoch)))
                 tile_ae_encoded(
-                    self.model, x,
+                    self.model, cuda.to_gpu(x),
                     osp.join(self.log_dir, 'x_encoded_{}.jpg'.format(epoch)))
 
         draw_loss_curve(self.log_file,
@@ -141,6 +143,8 @@ def main():
     n_epoch = args.epoch
     if args.model == 'CAE':
         model = CAE()
+    elif args.model == 'CAEPool':
+        model = CAEPool()
     else:
         sys.stderr.write('Unsupported model: {}'.format(args.model))
         sys.exit(1)

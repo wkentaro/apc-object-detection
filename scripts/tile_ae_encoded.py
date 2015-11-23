@@ -6,14 +6,15 @@ import os.path as osp
 import pickle
 
 from chainer import cuda
+from chainer import Variable
 import cv2
 import numpy as np
 
 from apc_od.imaging import tile_slices_to_image
 
 
-def tile_ae_encoded(model, x, filename):
-    x = cuda.to_gpu(x)
+def tile_ae_encoded(model, x_data, filename):
+    x = Variable(x_data)
     h = model.encode(x)
     for i, hi in enumerate(cuda.to_cpu(h.data)):
         tile_img = np.array(tile_slices_to_image(hi))

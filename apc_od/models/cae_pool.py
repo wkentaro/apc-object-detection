@@ -7,13 +7,14 @@ import chainer.links as L
 
 
 class CAEPool(chainer.Chain):
-    """Convolutional Auto Encoder with Pooling"""
+    """Convolutional Autoencoder with Pooling"""
 
     def __init__(self):
         super(CAEPool, self).__init__(
             conv1=L.Convolution2D(in_channels=3, out_channels=64, ksize=2),
             deconv2=L.Deconvolution2D(in_channels=64, out_channels=3, ksize=2),
         )
+        self.name = 'convolutional_autoencoder_with_pooling'
         self.y = None
         self.loss = None
 

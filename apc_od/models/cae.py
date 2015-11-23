@@ -7,13 +7,14 @@ import chainer.links as L
 
 
 class CAE(chainer.Chain):
-    """Convolutional Auto Encoder"""
+    """Convolutional Autoencoder"""
 
     def __init__(self):
         super(CAE, self).__init__(
             conv1=L.Convolution2D(3, 64, 2, stride=1, pad=1),
             deconv2=L.Deconvolution2D(64, 3, 2, stride=1, pad=1),
         )
+        self.name = 'convolutional_autoencoder'
         self.y = None
         self.loss = None
 

@@ -133,6 +133,7 @@ def main():
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     # setup for logging
     log_dir = osp.join(here, '../logs/{}_{}'.format(timestamp, args.model))
+    log_dir = osp.abspath(log_dir)
     os.mkdir(log_dir)
     log_file = osp.join(log_dir, 'log.txt')
     logging.basicConfig(

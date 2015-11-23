@@ -1,7 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os.path as osp
+
 import numpy as np
+from skimage.io import imread
+from skimage.transform import resize
+
+
+def im_preprocess(im):
+    shape = np.array(im.shape[:2]) // 2
+    im = resize(im, shape, preserve_range=True)
+    return im
 
 
 def im_to_blob(im):

@@ -9,6 +9,7 @@ addons:
       - libatlas-dev
       - libatlas-base-dev
       - liblapack-dev
+      - libhdf5-serial-dev
 
 python:
   - 2.7
@@ -18,8 +19,11 @@ before_install:
   - pip install -U -v numpy scipy
   - pip install flake8 nose gdown coveralls
   - pip install -r requirements.txt
+  # install chainer from source
+  - cd /tmp
   - git clone https://github.com/wkentaro/chainer.git -b develop
   - (cd chainer && python setup.py develop)
+  - cd $TRAVIS_BUILD_DIR
 
 install:
   - python setup.py develop
@@ -29,7 +33,7 @@ before_script:
   - (cd data && tar zxf raw_data.tgz && mv raw_data/* .)
 
 script:
-  - flake8 apc_od scripts tests --exclude=imaging.py
+  - flake8
   - nosetests tests --with-coverage --cover-package=apc_od
 
 after_success:

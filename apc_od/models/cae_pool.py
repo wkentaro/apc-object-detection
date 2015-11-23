@@ -1,34 +1,34 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import chainer
 import chainer.functions as F
-from chainer import FunctionSet
-from chainer import Variable
+import chainer.links as L
 
 
-class CAEPool(FunctionSet):
+class CAEPool(chainer.Chain):
     """Convolutional Auto Encoder with Pooling"""
 
     def __init__(self):
         super(CAEPool, self).__init__(
-            conv1=F.Convolution2D(in_channels=3, out_channels=64, ksize=2),
-            pool1=F.MaxPooling2D(ksize=2, stride=1),
-            unpool2=F.Unpooling2D(ksize=2, stride=1),
-            deconv2=F.Deconvolution2D(in_channels=64, out_channels=3, ksize=2),
+            conv1=L.Convolution2D(in_channels=3, out_channels=64, ksize=2),
+            deconv2=L.Deconvolution2D(in_channels=64, out_channels=3, ksize=2),
         )
+        self.y = None
+        self.loss = None
 
-    def forward(self, x_data, train=True):
-        x = Variable(x_data, volatile=not train)
-        h = self.encode(x)
-        h = self.decode(h)
-        return F.mean_squared_error(x, h), h
+    def __call__(self, x):
+        z = self.encode(x)
+        self.y = self.decode(z)
+        self.loss = F.mean_squared_error(x, self.y)
+        return self.loss, self.y
 
     def encode(self, x):
         h = self.conv1(x)
-        h = self.pool1(h)
-        return h
+        z = F.max_pooling_2d(h, ksize=2, stride=1)
+        return z
 
-    def decode(self, x):
-        h = self.unpool2(x)
-        h = self.deconv2(h)
-        return h
+    def decode(self, z):
+        h = F.unpooling_2d(z, ksize=2, stride=1)
+        y = self.deconv2(h)
+        return y

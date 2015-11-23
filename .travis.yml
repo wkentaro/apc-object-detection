@@ -29,7 +29,7 @@ before_script:
   - (cd data && tar zxf raw_data.tgz && mv raw_data/* .)
 
 script:
-  - flake8 apc_od scripts tests --exclude=imaging.py
+  - flake8
   - nosetests tests --with-coverage --cover-package=apc_od
 
 after_success:

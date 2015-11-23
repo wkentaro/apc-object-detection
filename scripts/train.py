@@ -11,7 +11,6 @@ import sys
 
 from chainer import cuda
 from chainer import optimizers as O
-from chainer import serializers
 import cv2
 import numpy as np
 from skimage.transform import resize

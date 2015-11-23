@@ -11,6 +11,8 @@ import sys
 
 from chainer import cuda
 from chainer import optimizers as O
+from chainer import serializers
+from chainer import Variable
 import cv2
 import numpy as np
 from skimage.transform import resize
@@ -39,6 +41,7 @@ class UnsupervisedTrain(object):
         self.log_dir = log_dir
         self.log_file = log_file
         self.on_gpu = on_gpu
+        self.model = model
         # setup model on gpu
         if self.on_gpu:
             self.model.to_gpu()
@@ -58,8 +61,9 @@ class UnsupervisedTrain(object):
                                 for f in files_batch])
             if self.on_gpu:
                 x_batch = cuda.to_gpu(x_batch.astype(np.float32))
+            x = Variable(x_batch, volatile=not train)
             self.optimizer.zero_grads()
-            loss, x_hat = self.model(x_batch, train=train)
+            loss, x_hat = self.model(x)
             loss.backward()
             self.optimizer.update()
             sum_loss += float(loss.data)
@@ -93,10 +97,13 @@ class UnsupervisedTrain(object):
             # save model and input/encoded/decoded
             if epoch % save_interval == (save_interval - 1):
                 print('epoch:{:02d}; saving'.format(epoch))
+                # save model
                 model_path = osp.join(
-                    self.log_dir, 'chainermodel_{}.pkl'.format(epoch))
-                with open(model_path, 'wb') as f:
-                    pickle.dump(self.model, f)  # save model
+                    self.log_dir,
+                    '{name}_model_{epoch}.h5'.format(name=self.model.name,
+                                                     epoch=epoch))
+                serializers.save_hdf5(model_path, self.model)
+                # save x_data
                 x_path = osp.join(self.log_dir, 'x_{}.pkl'.format(epoch))
                 with open(x_path, 'wb') as f:
                     pickle.dump(x, f)  # save x

@@ -11,8 +11,9 @@ class CAE(chainer.Chain):
 
     def __init__(self):
         super(CAE, self).__init__(
-            conv1=L.Convolution2D(3, 64, 2, stride=1, pad=1),
-            deconv2=L.Deconvolution2D(64, 3, 2, stride=1, pad=1),
+            conv1=L.Convolution2D(3, 64, 2, stride=2, pad=1),
+            deconv2=L.Deconvolution2D(64, 3, 2, stride=2, pad=1,
+                                      outsize=(178, 267)),
         )
         self.name = 'convolutional_autoencoder'
         self.y = None

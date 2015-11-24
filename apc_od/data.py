@@ -1,7 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os.path as osp
+
 import numpy as np
+from skimage.io import imread
+from skimage.transform import resize
+
+
+def im_preprocess(im):
+    shape = np.array(im.shape[:2]) // 2
+    im = resize(im, shape, preserve_range=True)
+    return im
 
 
 def im_to_blob(im):
@@ -26,3 +36,13 @@ def blob_to_im(blob):
     im = im.transpose((1, 2, 0))
     im = im.astype(np.uint8)
     return im
+
+
+def snack():
+    here = osp.dirname(osp.abspath(__file__))
+    return imread(osp.join(here, 'data/snack.jpg'))
+
+
+def doll():
+    here = osp.dirname(osp.abspath(__file__))
+    return imread(osp.join(here, 'data/doll.jpg'))

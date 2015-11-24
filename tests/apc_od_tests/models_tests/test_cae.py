@@ -7,9 +7,9 @@ from chainer import optimizers as O
 from chainer import Variable
 import numpy as np
 
+from apc_od.data import snack
 from apc_od import im_preprocess
 from apc_od import im_to_blob
-from apc_od.data import snack
 from apc_od.models import CAE
 
 

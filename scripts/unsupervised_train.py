@@ -16,8 +16,8 @@ from chainer import Variable
 import cv2
 import numpy as np
 
-from apc_od import im_preprocess
 from apc_od import get_raw
+from apc_od import im_preprocess
 from apc_od import im_to_blob
 from apc_od.models import CAE
 from apc_od.models import CAEPool

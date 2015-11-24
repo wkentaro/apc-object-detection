@@ -1,43 +1,37 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from chainer import optimizers
+import unittest
+
+import chainer.optimizers as O
 from chainer import Variable
 import numpy as np
-from skimage.data import astronaut
 
+from apc_od.data import snack
+from apc_od import im_preprocess
 from apc_od import im_to_blob
 from apc_od.models import CAEPool
 
 
-def test_cae_pool_train():
-    img = astronaut()
-    x_data = np.array([im_to_blob(img)])
-    x = Variable(x_data, volatile=False)
+class TestCAEPool(unittest.TestCase):
 
-    model = CAEPool()
-    optimizer = optimizers.Adam()
-    optimizer.setup(model)
+    def setUp(self):
+        self.model = CAEPool()
+        self.optimizer = O.Adam()
+        self.optimizer.setup(self.model)
 
-    optimizer.zero_grads()
-    loss, x_hat = model(x)
-    loss.backward()
+        img = snack()
+        x_data = np.array([im_to_blob(im_preprocess(img))])
+        self.x = Variable(x_data)
 
+    def test_train(self):
+        self.optimizer.zero_grads()
+        loss, x_hat = self.model(self.x)
+        loss.backward()
 
-def test_cae_pool_encode():
-    img = astronaut()
-    x_data = np.array([im_to_blob(img)])
-    x = Variable(x_data, volatile=True)
+    def test_encode(self):
+        self.model.encode(self.x)
 
-    model = CAEPool()
-    model.encode(x)
-
-
-def test_cae_pool_decode():
-    img = astronaut()
-    x_data = np.array([im_to_blob(img)])
-    x = Variable(x_data, volatile=True)
-
-    model = CAEPool()
-    h = model.encode(x)
-    model.decode(h)
+    def test_decode(self):
+        h = self.model.encode(self.x)
+        self.model.decode(h)

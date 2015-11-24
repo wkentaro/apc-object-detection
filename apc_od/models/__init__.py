@@ -3,7 +3,9 @@
 
 from apc_od.models.cae import CAE
 from apc_od.models.cae_pool import CAEPool
+from apc_od.models.cae_ones import CAEOnes
 
 
 CAE = CAE
 CAEPool = CAEPool
+CAEOnes = CAEOnes

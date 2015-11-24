@@ -124,6 +124,15 @@ def main():
                         help='name of model (default: CAE)')
     args = parser.parse_args()
 
+    n_epoch = args.epoch
+    if args.model == 'CAE':
+        model = CAE()
+    elif args.model == 'CAEPool':
+        model = CAEPool()
+    else:
+        sys.stderr.write('Unsupported model: {}'.format(args.model))
+        sys.exit(1)
+
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     # setup for logging
     log_dir = osp.join(here, '../logs/{}_{}'.format(timestamp, args.model))
@@ -139,15 +148,6 @@ def main():
     msg = 'logging in {};'.format(log_dir)
     logging.info(msg)
     print(msg)
-
-    n_epoch = args.epoch
-    if args.model == 'CAE':
-        model = CAE()
-    elif args.model == 'CAEPool':
-        model = CAEPool()
-    else:
-        sys.stderr.write('Unsupported model: {}'.format(args.model))
-        sys.exit(1)
 
     app = UnsupervisedTrain(
         model=model,

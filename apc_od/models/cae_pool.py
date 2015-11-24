@@ -15,7 +15,7 @@ class CAEPool(chainer.Chain):
             deconv2=L.Deconvolution2D(64, 3, 2, stride=2, pad=1,
                                       outsize=(178, 267)),
         )
-        self.name = 'convolutional_autoencoder_with_pooling'
+        self.name = 'cae_pool'
         self.y = None
         self.loss = None
 

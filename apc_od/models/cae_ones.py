@@ -7,8 +7,6 @@ import chainer.functions as F
 import chainer.links as L
 from chainer import Variable
 
-import numpy as np
-
 
 class CAEOnes(chainer.Chain):
     """Convolutional Autoencoder for Ones"""

@@ -22,7 +22,7 @@ before_install:
   # install chainer from source
   - cd /tmp
   - git clone https://github.com/wkentaro/chainer.git -b develop
-  - (cd chainer && python setup.py develop)
+  - (cd chainer && python setup.py install)
   - cd $TRAVIS_BUILD_DIR
 
 install:

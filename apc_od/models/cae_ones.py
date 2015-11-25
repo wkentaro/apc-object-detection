@@ -14,10 +14,10 @@ class CAEOnes(chainer.Chain):
     def __init__(self):
         super(CAEOnes, self).__init__(
             conv1=L.Convolution2D(3, 64, 2, stride=2, pad=1),
-            linear1_1=L.Linear(192960, 100),
-            linear1_2=L.Linear(100, 10),
-            linear2_1=L.Linear(10, 100),
-            linear2_2=L.Linear(100, 192960),
+            linear1_1=L.Linear(192960, 1000),
+            linear1_2=L.Linear(1000, 4),
+            linear2_1=L.Linear(4, 1000),
+            linear2_2=L.Linear(1000, 192960),
             deconv2=L.Deconvolution2D(64, 3, 2, stride=2, pad=1,
                                       outsize=(178, 267)),
         )

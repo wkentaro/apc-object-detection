@@ -5,8 +5,6 @@ import argparse
 import os.path as osp
 import pickle
 
-from chainer import cuda
-from chainer import Variable
 import cv2
 import numpy as np
 

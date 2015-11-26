@@ -20,6 +20,7 @@ from apc_od import get_raw
 from apc_od import im_preprocess
 from apc_od import im_to_blob
 from apc_od.models import CAE
+from apc_od.models import CAEOnes
 from apc_od.models import CAEPool
 from draw_loss import draw_loss_curve
 from tile_ae_encoded import tile_ae_encoded
@@ -67,7 +68,7 @@ class UnsupervisedTrain(object):
             x_hat_data = cuda.to_cpu(x_hat_data)
         return sum_loss, x_batch, x_hat_data
 
-    def main_loop(self, n_epoch=10, save_interval=None):
+    def main_loop(self, n_epoch=10, save_interval=None, save_encoded=True):
         save_interval = save_interval or (n_epoch // 10)
         train_data = get_raw(which_set='train')
         test_data = get_raw(which_set='test')
@@ -107,9 +108,12 @@ class UnsupervisedTrain(object):
                     pickle.dump(x_hat, f)  # save x_hat
                 tile_ae_inout(x, x_hat,
                               osp.join(self.log_dir, 'X_{}.jpg'.format(epoch)))
-                tile_ae_encoded(
-                    self.model, cuda.to_gpu(x),
-                    osp.join(self.log_dir, 'x_encoded_{}.jpg'.format(epoch)))
+                z = self.model.encode(Variable(cuda.to_gpu(x), volatile=True))
+                if save_encoded:
+                    tile_ae_encoded(
+                        cuda.to_cpu(z.data),
+                        osp.join(self.log_dir,
+                                 'x_encoded_{}.jpg'.format(epoch)))
 
         draw_loss_curve(self.log_file,
                         osp.join(self.log_dir, 'loss_curve.jpg'),
@@ -122,22 +126,35 @@ def main():
                         help='number of recursion (default: 50)')
     parser.add_argument('--model', type=str, default='CAE',
                         help='name of model (default: CAE)')
+    parser.add_argument('--save-interval', type=int, default=None,
+                        help='save interval of x and x_hat')
+    parser.add_argument('--no-logging', action='store_true',
+                        help='logging to tmp dir')
     args = parser.parse_args()
 
+    save_encoded = True
     n_epoch = args.epoch
+    save_interval = args.save_interval
     if args.model == 'CAE':
         model = CAE()
     elif args.model == 'CAEPool':
         model = CAEPool()
+    elif args.model == 'CAEOnes':
+        model = CAEOnes()
+        save_encoded = False
     else:
         sys.stderr.write('Unsupported model: {}'.format(args.model))
         sys.exit(1)
 
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     # setup for logging
-    log_dir = osp.join(here, '../logs/{}_{}'.format(timestamp, args.model))
-    log_dir = osp.abspath(log_dir)
-    os.mkdir(log_dir)
+    if args.no_logging:
+        import tempfile
+        log_dir = tempfile.mkdtemp()
+    else:
+        log_dir = osp.join(here, '../logs/{}_{}'.format(timestamp, args.model))
+        log_dir = osp.realpath(osp.abspath(log_dir))
+        os.mkdir(log_dir)
     log_file = osp.join(log_dir, 'log.txt')
     logging.basicConfig(
         format='%(asctime)s [%(levelname)s] %(message)s',
@@ -155,7 +172,11 @@ def main():
         log_file=log_file,
         on_gpu=True
     )
-    app.main_loop(n_epoch=n_epoch)
+    app.main_loop(
+        n_epoch=n_epoch,
+        save_interval=save_interval,
+        save_encoded=save_encoded,
+    )
 
 
 if __name__ == '__main__':

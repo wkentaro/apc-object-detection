@@ -126,12 +126,15 @@ def main():
                         help='number of recursion (default: 50)')
     parser.add_argument('--model', type=str, default='CAE',
                         help='name of model (default: CAE)')
+    parser.add_argument('--save-interval', type=int, default=None,
+                        help='save interval of x and x_hat')
     parser.add_argument('--no-logging', action='store_true',
                         help='logging to tmp dir')
     args = parser.parse_args()
 
     save_encoded = True
     n_epoch = args.epoch
+    save_interval = args.save_interval
     if args.model == 'CAE':
         model = CAE()
     elif args.model == 'CAEPool':
@@ -169,7 +172,11 @@ def main():
         log_file=log_file,
         on_gpu=True
     )
-    app.main_loop(n_epoch=n_epoch, save_encoded=save_encoded)
+    app.main_loop(
+        n_epoch=n_epoch,
+        save_interval=save_interval,
+        save_encoded=save_encoded,
+    )
 
 
 if __name__ == '__main__':

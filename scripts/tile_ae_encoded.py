@@ -13,11 +13,17 @@ import numpy as np
 from apc_od.imaging import tile_slices_to_image
 
 
-def tile_ae_encoded(model, x_data, filename):
-    x = Variable(x_data)
-    h = model.encode(x)
-    for i, hi in enumerate(cuda.to_cpu(h.data)):
-        tile_img = np.array(tile_slices_to_image(hi))
+def atleast_4d(x):
+    x = np.atleast_3d(x)
+    if len(x.shape) == 3:
+        x = np.array([x])
+    return x
+
+
+def tile_ae_encoded(z_data, filename):
+    z_data = atleast_4d(z_data)
+    for i, zi in enumerate(z_data):
+        tile_img = np.array(tile_slices_to_image(zi))
         base, ext = osp.splitext(filename)
         filename_ = '{base}_{id}{ext}'.format(base=base, id=i, ext=ext)
         cv2.imwrite(filename_, tile_img)

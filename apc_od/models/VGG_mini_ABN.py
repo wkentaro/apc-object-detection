@@ -2,17 +2,14 @@
 # -*- coding: utf-8 -*-
 # copied from https://github.com/mitmul/chainer-cifar10
 
-from chainer import Variable, FunctionSet
 import chainer.functions as F
+from chainer import FunctionSet
+from chainer import Variable
 
 
 class VGG_mini_ABN(FunctionSet):
 
-    """
-
-    VGGnet for CIFAR-10
-
-    """
+    """VGGnet for CIFAR-10"""
 
     def __init__(self):
         super(VGG_mini_ABN, self).__init__(

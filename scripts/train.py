@@ -95,9 +95,9 @@ class Trainer(object):
             sum_loss, sum_accuracy, x, x_hat = self.batch_loop(test_data,
                                                                train=False)
             # logging
-            mean_loss = sum_loss / N_train
+            mean_loss = sum_loss / N_test
             if self.is_supervised:
-                mean_accuracy = sum_accuracy / N_train
+                mean_accuracy = sum_accuracy / N_test
             msg = ('epoch:{:02d}; train mean loss={}; accuracy={};'
                    .format(epoch, mean_loss, mean_accuracy))
             logging.info(msg)

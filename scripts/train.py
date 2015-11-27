@@ -19,9 +19,6 @@ import numpy as np
 from apc_od import get_raw
 from apc_od import im_preprocess
 from apc_od import im_to_blob
-from apc_od.models import CAE
-from apc_od.models import CAEOnes
-from apc_od.models import CAEPool
 from draw_loss import draw_loss_curve
 from tile_ae_encoded import tile_ae_encoded
 from tile_ae_inout import tile_ae_inout
@@ -50,6 +47,7 @@ class Trainer(object):
         N = len(files)
         # train loop
         sum_loss = 0
+        sum_accuracy = 0 if self.is_supervised else None
         perm = np.random.permutation(N)
         for i in range(0, N, batch_size):
             files_batch = files[perm[i:i + batch_size]]
@@ -58,16 +56,22 @@ class Trainer(object):
             if self.on_gpu:
                 x_batch = cuda.to_gpu(x_batch.astype(np.float32))
             x = Variable(x_batch, volatile=not train)
+            if self.is_supervised:
+                pass
+            else:
+                inputs = [x]
             self.optimizer.zero_grads()
-            loss, x_hat = self.model(x)
+            loss, x_hat = self.model(*inputs)
             loss.backward()
             self.optimizer.update()
             sum_loss += float(loss.data)
+            if self.is_supervised:
+                sum_accuracy += float(loss.data)
         x_hat_data = x_hat.data
         if self.on_gpu:
             x_batch = cuda.to_cpu(x_batch)
             x_hat_data = cuda.to_cpu(x_hat_data)
-        return sum_loss, x_batch, x_hat_data
+        return sum_loss, sum_accuracy, x_batch, x_hat_data
 
     def main_loop(self, n_epoch=10, save_interval=None, save_encoded=True):
         save_interval = save_interval or (n_epoch // 10)
@@ -77,17 +81,25 @@ class Trainer(object):
         N_test = len(test_data.filenames)
         for epoch in xrange(0, n_epoch):
             # train
-            sum_loss, _, _ = self.batch_loop(train_data, train=True)
+            sum_loss, sum_accuracy, _, _ = self.batch_loop(train_data,
+                                                           train=True)
             # logging
-            msg = ('epoch:{:02d}; train mean loss={};'
-                   .format(epoch, sum_loss / N_train))
+            mean_loss = sum_loss / N_train
+            if self.is_supervised:
+                mean_accuracy = sum_accuracy / N_train
+            msg = ('epoch:{:02d}; train mean loss={}; accuracy={};'
+                   .format(epoch, mean_loss, mean_accuracy))
             logging.info(msg)
             print(msg)
             # test
-            sum_loss, x, x_hat = self.batch_loop(test_data, train=False)
+            sum_loss, sum_accuracy, x, x_hat = self.batch_loop(test_data,
+                                                               train=False)
             # logging
-            msg = ('epoch:{:02d}; test mean loss={};'
-                   .format(epoch, sum_loss / N_test))
+            mean_loss = sum_loss / N_test
+            if self.is_supervised:
+                mean_accuracy = sum_accuracy / N_test
+            msg = ('epoch:{:02d}; train mean loss={}; accuracy={};'
+                   .format(epoch, mean_loss, mean_accuracy))
             logging.info(msg)
             print(msg)
             # save model and input/encoded/decoded
@@ -140,19 +152,27 @@ def main():
     is_supervised = True if args.supervised_or_not == 'supervised' else False
 
     if is_supervised:
-        sys.stderr.write('Unsupported model: {}\n'.format(args.model))
-        sys.exit(1)
+        if args.model == 'VGG_mini_ABN':
+            from apc_od.models import VGG_mini_ABN
+            model = VGG_mini_ABN()
+            save_encoded = False
+        else:
+            sys.stderr.write('Unsupported model: {}\n'.format(args.model))
+            sys.exit(1)
     else:
         # unsupervised
         if args.model == 'CAE':
+            from apc_od.models import CAE
             model = CAE()
             save_encoded = True
-        elif args.model == 'CAEPool':
-            model = CAEPool()
-            save_encoded = True
         elif args.model == 'CAEOnes':
+            from apc_od.models import CAEOnes
             model = CAEOnes()
             save_encoded = False
+        elif args.model == 'CAEPool':
+            from apc_od.models import CAEPool
+            model = CAEPool()
+            save_encoded = True
         else:
             sys.stderr.write('Unsupported model: {}\n'.format(args.model))
             sys.exit(1)
@@ -182,7 +202,7 @@ def main():
         is_supervised=is_supervised,
         log_dir=log_dir,
         log_file=log_file,
-        on_gpu=True
+        on_gpu=True,
     )
     trainer.main_loop(
         n_epoch=n_epoch,

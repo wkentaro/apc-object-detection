@@ -137,8 +137,13 @@ def main():
     is_supervised = True if args.supervised_or_not == 'supervised' else False
 
     if is_supervised:
-        sys.stderr.write('Unsupported model: {}\n'.format(args.model))
-        sys.exit(1)
+        if args.model == 'VGG_mini_ABN':
+            from apc_od.models import VGG_mini_ABN
+            model = VGG_mini_ABN()
+            save_encoded = False
+        else:
+            sys.stderr.write('Unsupported model: {}\n'.format(args.model))
+            sys.exit(1)
     else:
         # unsupervised
         if args.model == 'CAE':
@@ -182,7 +187,7 @@ def main():
         is_supervised=is_supervised,
         log_dir=log_dir,
         log_file=log_file,
-        on_gpu=True
+        on_gpu=True,
     )
     trainer.main_loop(
         n_epoch=n_epoch,

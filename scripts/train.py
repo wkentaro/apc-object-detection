@@ -177,14 +177,14 @@ def main():
     logging.info(msg)
     print(msg)
 
-    app = Trainer(
+    trainer = Trainer(
         model=model,
         is_supervised=is_supervised,
         log_dir=log_dir,
         log_file=log_file,
         on_gpu=True
     )
-    app.main_loop(
+    trainer.main_loop(
         n_epoch=n_epoch,
         save_interval=save_interval,
         save_encoded=save_encoded,

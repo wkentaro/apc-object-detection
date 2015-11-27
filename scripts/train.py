@@ -19,9 +19,6 @@ import numpy as np
 from apc_od import get_raw
 from apc_od import im_preprocess
 from apc_od import im_to_blob
-from apc_od.models import CAE
-from apc_od.models import CAEOnes
-from apc_od.models import CAEPool
 from draw_loss import draw_loss_curve
 from tile_ae_encoded import tile_ae_encoded
 from tile_ae_inout import tile_ae_inout
@@ -145,14 +142,17 @@ def main():
     else:
         # unsupervised
         if args.model == 'CAE':
+            from apc_od.models import CAE
             model = CAE()
             save_encoded = True
-        elif args.model == 'CAEPool':
-            model = CAEPool()
-            save_encoded = True
         elif args.model == 'CAEOnes':
+            from apc_od.models import CAEOnes
             model = CAEOnes()
             save_encoded = False
+        elif args.model == 'CAEPool':
+            from apc_od.models import CAEPool
+            model = CAEPool()
+            save_encoded = True
         else:
             sys.stderr.write('Unsupported model: {}\n'.format(args.model))
             sys.exit(1)

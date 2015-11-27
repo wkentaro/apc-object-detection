@@ -30,13 +30,14 @@ from tile_ae_inout import tile_ae_inout
 here = osp.dirname(osp.abspath(__file__))
 
 
-class UnsupervisedTrain(object):
+class Trainer(object):
 
-    def __init__(self, model, log_dir, log_file, on_gpu):
+    def __init__(self, model, is_supervised, log_dir, log_file, on_gpu):
+        self.model = model
+        self.is_supervised = is_supervised
         self.log_dir = log_dir
         self.log_file = log_file
         self.on_gpu = on_gpu
-        self.model = model
         # setup model on gpu
         if self.on_gpu:
             self.model.to_gpu()
@@ -117,34 +118,44 @@ class UnsupervisedTrain(object):
 
         draw_loss_curve(self.log_file,
                         osp.join(self.log_dir, 'loss_curve.jpg'),
-                        no_acc=True)
+                        no_acc=not self.is_supervised)
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'supervised_or_not', type=str, choices=['supervised', 'unsupervised'],
+        help='do supervised or unsupervised training')
     parser.add_argument('--epoch', type=int, default=50,
                         help='number of recursion (default: 50)')
-    parser.add_argument('--model', type=str, default='CAE',
-                        help='name of model (default: CAE)')
-    parser.add_argument('--save-interval', type=int, default=None,
-                        help='save interval of x and x_hat')
     parser.add_argument('--no-logging', action='store_true',
                         help='logging to tmp dir')
+    parser.add_argument('--save-interval', type=int, default=None,
+                        help='save interval of x and x_hat')
+    parser.add_argument('-m', '--model', required=True, help='name of model')
     args = parser.parse_args()
 
-    save_encoded = True
     n_epoch = args.epoch
     save_interval = args.save_interval
-    if args.model == 'CAE':
-        model = CAE()
-    elif args.model == 'CAEPool':
-        model = CAEPool()
-    elif args.model == 'CAEOnes':
-        model = CAEOnes()
-        save_encoded = False
-    else:
-        sys.stderr.write('Unsupported model: {}'.format(args.model))
+    is_supervised = True if args.supervised_or_not == 'supervised' else False
+
+    if is_supervised:
+        sys.stderr.write('Unsupported model: {}\n'.format(args.model))
         sys.exit(1)
+    else:
+        # unsupervised
+        if args.model == 'CAE':
+            model = CAE()
+            save_encoded = True
+        elif args.model == 'CAEPool':
+            model = CAEPool()
+            save_encoded = True
+        elif args.model == 'CAEOnes':
+            model = CAEOnes()
+            save_encoded = False
+        else:
+            sys.stderr.write('Unsupported model: {}\n'.format(args.model))
+            sys.exit(1)
 
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     # setup for logging
@@ -166,8 +177,9 @@ def main():
     logging.info(msg)
     print(msg)
 
-    app = UnsupervisedTrain(
+    app = Trainer(
         model=model,
+        is_supervised=is_supervised,
         log_dir=log_dir,
         log_file=log_file,
         on_gpu=True

@@ -47,6 +47,7 @@ class Trainer(object):
         N = len(files)
         # train loop
         sum_loss = 0
+        sum_accuracy = 0 if self.is_supervised else None
         perm = np.random.permutation(N)
         for i in range(0, N, batch_size):
             files_batch = files[perm[i:i + batch_size]]
@@ -55,16 +56,22 @@ class Trainer(object):
             if self.on_gpu:
                 x_batch = cuda.to_gpu(x_batch.astype(np.float32))
             x = Variable(x_batch, volatile=not train)
+            if self.is_supervised:
+                pass
+            else:
+                inputs = [x]
             self.optimizer.zero_grads()
-            loss, x_hat = self.model(x)
+            loss, x_hat = self.model(*inputs)
             loss.backward()
             self.optimizer.update()
             sum_loss += float(loss.data)
+            if self.is_supervised:
+                sum_accuracy += float(loss.data)
         x_hat_data = x_hat.data
         if self.on_gpu:
             x_batch = cuda.to_cpu(x_batch)
             x_hat_data = cuda.to_cpu(x_hat_data)
-        return sum_loss, x_batch, x_hat_data
+        return sum_loss, sum_accuracy, x_batch, x_hat_data
 
     def main_loop(self, n_epoch=10, save_interval=None, save_encoded=True):
         save_interval = save_interval or (n_epoch // 10)
@@ -74,17 +81,25 @@ class Trainer(object):
         N_test = len(test_data.filenames)
         for epoch in xrange(0, n_epoch):
             # train
-            sum_loss, _, _ = self.batch_loop(train_data, train=True)
+            sum_loss, sum_accuracy, _, _ = self.batch_loop(train_data,
+                                                           train=True)
             # logging
-            msg = ('epoch:{:02d}; train mean loss={};'
-                   .format(epoch, sum_loss / N_train))
+            mean_loss = sum_loss / N_train
+            if self.is_supervised:
+                mean_accuracy = sum_accuracy / N_train
+            msg = ('epoch:{:02d}; train mean loss={}; accuracy={};'
+                   .format(epoch, mean_loss, mean_accuracy))
             logging.info(msg)
             print(msg)
             # test
-            sum_loss, x, x_hat = self.batch_loop(test_data, train=False)
+            sum_loss, sum_accuracy, x, x_hat = self.batch_loop(test_data,
+                                                               train=False)
             # logging
-            msg = ('epoch:{:02d}; test mean loss={};'
-                   .format(epoch, sum_loss / N_test))
+            mean_loss = sum_loss / N_train
+            if self.is_supervised:
+                mean_accuracy = sum_accuracy / N_train
+            msg = ('epoch:{:02d}; train mean loss={}; accuracy={};'
+                   .format(epoch, mean_loss, mean_accuracy))
             logging.info(msg)
             print(msg)
             # save model and input/encoded/decoded

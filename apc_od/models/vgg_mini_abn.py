@@ -3,9 +3,8 @@
 # copied from https://github.com/mitmul/chainer-cifar10
 
 import chainer
-import chainer.links as L
 import chainer.functions as F
-from chainer import Variable
+import chainer.links as L
 
 
 class VGG_mini_ABN(chainer.Chain):

@@ -10,7 +10,6 @@ import numpy as np
 from skimage.transform import resize
 
 from apc_od.data import snack
-from apc_od import im_preprocess
 from apc_od import im_to_blob
 from apc_od.models import VGG_mini_ABN
 

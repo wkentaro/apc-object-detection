@@ -16,7 +16,7 @@ mask_to_roi = apc_od.data.mask_to_roi
 
 
 get_raw = apc_od.dataset.get_raw
-get_mask = apc_od.dataset.get_mask
+raw_to_mask_path = apc_od.dataset.raw_to_mask_path
 
 
 tile_slices_to_image = apc_od.imaging.tile_slices_to_image

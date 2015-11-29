@@ -17,7 +17,9 @@ def get_raw(which_set):
     return data
 
 
-def get_mask():
-    data_dir = os.path.join(here, '../data/mask')
-    data = load_files(data_dir, load_content=False, shuffle=False)
-    return data
+def raw_to_mask_path(raw_path):
+    raw_path = os.path.realpath(raw_path)
+    raw_path = raw_path.split('/')
+    raw_path[-3] = 'mask'
+    mask_path = '/'.join(raw_path)
+    return mask_path

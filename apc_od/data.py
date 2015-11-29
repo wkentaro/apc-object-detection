@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import math
 import os.path as osp
 
 import numpy as np
 from skimage.io import imread
-from skimage.measure import regionprops
 from skimage.transform import resize
 
 

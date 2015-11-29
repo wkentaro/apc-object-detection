@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from nose.tools import assert_almost_equal
 from nose.tools import assert_equal
 
 import apc_od

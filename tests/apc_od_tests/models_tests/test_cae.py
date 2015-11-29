@@ -7,7 +7,7 @@ from chainer import optimizers as O
 from chainer import Variable
 import numpy as np
 
-from apc_od.data import snack
+from apc_od.data import doll
 from apc_od import im_preprocess
 from apc_od import im_to_blob
 from apc_od.models import CAE
@@ -20,7 +20,7 @@ class TestCAE(unittest.TestCase):
         self.optimizer = O.Adam()
         self.optimizer.setup(self.model)
 
-        img = snack()
+        img = doll()
         x_data = np.array([im_to_blob(im_preprocess(img))])
         self.x = Variable(x_data)
 

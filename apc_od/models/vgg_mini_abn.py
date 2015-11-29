@@ -8,7 +8,7 @@ import chainer.links as L
 
 
 class VGG_mini_ABN(chainer.Chain):
-    """VGGnet for CIFAR-10"""
+    """VGGnet for APC Object Detection"""
 
     def __init__(self):
         super(VGG_mini_ABN, self).__init__(
@@ -32,6 +32,8 @@ class VGG_mini_ABN(chainer.Chain):
             fc6=L.Linear(1024, 3)
         )
         self.name = 'VGG_mini_ABN'
+        self.loss = None
+        self.accuracy = None
 
     def __call__(self, x, y, train):
         h = F.relu(self.bn1_1(self.conv1_1(x), test=not train))
@@ -53,4 +55,7 @@ class VGG_mini_ABN(chainer.Chain):
         h = F.dropout(F.relu(self.fc5(h)), ratio=0.5, train=train)
         h = self.fc6(h)
 
-        return F.softmax_cross_entropy(h, y), F.accuracy(h, y), h
+        self.loss = F.softmax_cross_entropy(h, y)
+        self.accuracy = F.accuracy(h, y)
+        y_pred = h
+        return self.loss, self.accuracy, y_pred

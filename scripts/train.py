@@ -81,13 +81,16 @@ class Trainer(object):
             else:
                 inputs = [x]
             self.optimizer.zero_grads()
-            loss, y = self.model(*inputs, train=train)
+            if self.is_supervised:
+                loss, accuracy, y_pred = self.model(*inputs, train=train)
+            else:
+                loss, y_pred = self.model(*inputs, train=train)
             loss.backward()
             self.optimizer.update()
             sum_loss += float(loss.data)
             if self.is_supervised:
-                sum_accuracy += float(loss.data)
-        y_data = y.data
+                sum_accuracy += float(accuracy.data)
+        y_data = y_pred.data
         if self.on_gpu:
             x_batch = cuda.to_cpu(x_batch)
             y_data = cuda.to_cpu(y_data)

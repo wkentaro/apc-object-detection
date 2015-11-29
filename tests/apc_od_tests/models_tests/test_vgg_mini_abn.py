@@ -30,6 +30,6 @@ class TestVGG_mini_ABN(unittest.TestCase):
 
     def test_train(self):
         self.optimizer.zero_grads()
-        loss, accuracy, _ = self.model(self.x, self.y)
+        loss, accuracy, _ = self.model(self.x, self.y, train=True)
         loss.backward()
         self.optimizer.update()

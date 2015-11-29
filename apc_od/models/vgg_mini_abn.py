@@ -28,19 +28,19 @@ class VGG_mini_ABN(chainer.Chain):
         )
         self.name = 'VGG_mini_ABN'
 
-    def __call__(self, x, y):
-        h = F.relu(self.bn1_1(self.conv1_1(x)))
-        h = F.relu(self.bn1_2(self.conv1_2(h)))
+    def __call__(self, x, y, train):
+        h = F.relu(self.bn1_1(self.conv1_1(x), test=not train))
+        h = F.relu(self.bn1_2(self.conv1_2(h), test=not train))
         h = F.max_pooling_2d(h, 2, stride=2)
-        h = F.dropout(h, ratio=0.25)
+        h = F.dropout(h, ratio=0.25, train=train)
 
-        h = F.relu(self.bn2_1(self.conv2_1(h)))
-        h = F.relu(self.bn2_2(self.conv2_2(h)))
+        h = F.relu(self.bn2_1(self.conv2_1(h), test=not train))
+        h = F.relu(self.bn2_2(self.conv2_2(h), test=not train))
         h = F.max_pooling_2d(h, 2, stride=2)
-        h = F.dropout(h, ratio=0.25)
+        h = F.dropout(h, ratio=0.25, train=train)
 
-        h = F.dropout(F.relu(self.fc3(h)), ratio=0.5)
-        h = F.dropout(F.relu(self.fc4(h)), ratio=0.5)
+        h = F.dropout(F.relu(self.fc3(h)), ratio=0.5, train=train)
+        h = F.dropout(F.relu(self.fc4(h)), ratio=0.5, train=train)
         h = self.fc5(h)
 
         return F.softmax_cross_entropy(h, y), F.accuracy(h, y), h

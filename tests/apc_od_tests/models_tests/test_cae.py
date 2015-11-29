@@ -26,7 +26,7 @@ class TestCAE(unittest.TestCase):
 
     def test_train(self):
         self.optimizer.zero_grads()
-        loss, x_hat = self.model(self.x)
+        loss, x_hat = self.model(self.x, train=True)
         loss.backward()
         self.optimizer.update()
 

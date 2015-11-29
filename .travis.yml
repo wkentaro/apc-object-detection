@@ -17,7 +17,7 @@ python:
 before_install:
   - pip install -U pip wheel setuptools
   - pip install -U -v numpy scipy
-  - pip install flake8 nose gdown coveralls
+  - pip install flake8 nose coveralls
   - pip install -r requirements.txt
   # install chainer from source
   - cd /tmp
@@ -27,10 +27,6 @@ before_install:
 
 install:
   - python setup.py develop
-
-before_script:
-  - gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vWU9QRjdocktoU1U&export=download" -O data/raw_data.tgz
-  - (cd data && tar zxf raw_data.tgz && mv raw_data/* .)
 
 script:
   - flake8

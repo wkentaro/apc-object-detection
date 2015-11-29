@@ -15,6 +15,7 @@ from chainer import serializers
 from chainer import Variable
 import cv2
 import numpy as np
+from sklearn.preprocessing import LabelBinarizer
 
 from apc_od import get_raw
 from apc_od import im_preprocess
@@ -44,7 +45,9 @@ class Trainer(object):
 
     def batch_loop(self, dataset, train, batch_size=10):
         files = dataset.filenames
-        y = dataset.targets
+        lb = LabelBinarizer()
+        lb.fit(np.unique(dataset.target))
+        y = lb.transform(dataset.target)
         N = len(files)
         # train loop
         sum_loss = 0

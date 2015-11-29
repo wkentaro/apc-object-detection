@@ -15,6 +15,7 @@ blob_to_im = apc_od.data.blob_to_im
 
 
 get_raw = apc_od.dataset.get_raw
+get_mask = apc_od.dataset.get_mask
 
 
 tile_slices_to_image = apc_od.imaging.tile_slices_to_image

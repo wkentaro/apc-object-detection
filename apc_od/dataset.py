@@ -15,3 +15,9 @@ def get_raw(which_set):
     data_dir = os.path.join(here, '../data/raw_{0}'.format(which_set))
     data = load_files(data_dir, load_content=False, shuffle=False)
     return data
+
+
+def get_mask():
+    data_dir = os.path.join(here, '../data/mask')
+    data = load_files(data_dir, load_content=False, shuffle=False)
+    return data

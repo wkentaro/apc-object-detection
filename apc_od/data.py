@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import math
 import os.path as osp
 
 import numpy as np
 from skimage.io import imread
+from skimage.measure import regionprops
 from skimage.transform import resize
 
 
@@ -38,11 +40,21 @@ def blob_to_im(blob):
     return im
 
 
-def snack():
-    here = osp.dirname(osp.abspath(__file__))
-    return imread(osp.join(here, 'data/snack.jpg'))
+def mask_to_roi(mask):
+    prop = regionprops(mask)[0]
+    y0, x0 = prop.centroid
+    x1 = x0 + math.cos(prop.orientation) * 0.5 * prop.major_axis_length
+    y1 = y0 - math.sin(prop.orientation) * 0.5 * prop.major_axis_length
+    x2 = x0 - math.sin(prop.orientation) * 0.5 * prop.minor_axis_length
+    y2 = y0 - math.cos(prop.orientation) * 0.5 * prop.minor_axis_length
+    return y1, x1, y2, x2
 
 
 def doll():
     here = osp.dirname(osp.abspath(__file__))
     return imread(osp.join(here, 'data/doll.jpg'))
+
+
+def doll_mask():
+    here = osp.dirname(osp.abspath(__file__))
+    return imread(osp.join(here, 'data/doll_mask.jpg'))

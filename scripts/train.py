@@ -89,10 +89,10 @@ class Trainer(object):
                                                            train=True)
             # logging
             mean_loss = sum_loss / N_train
+            msg = 'epoch:{:02d}; train mean loss={};'.format(epoch, mean_loss)
             if self.is_supervised:
                 mean_accuracy = sum_accuracy / N_train
-            msg = ('epoch:{:02d}; train mean loss={}; accuracy={};'
-                   .format(epoch, mean_loss, mean_accuracy))
+                msg += ' accuracy={};'.format(mean_accuracy)
             logging.info(msg)
             print(msg)
             # test
@@ -100,10 +100,10 @@ class Trainer(object):
                 self.batch_loop(test_data, train=False)
             # logging
             mean_loss = sum_loss / N_test
+            msg = 'epoch:{:02d}; test mean loss={};'.format(epoch, mean_loss)
             if self.is_supervised:
                 mean_accuracy = sum_accuracy / N_test
-            msg = ('epoch:{:02d}; train mean loss={}; accuracy={};'
-                   .format(epoch, mean_loss, mean_accuracy))
+                msg += ' accuracy={};'.format(mean_accuracy)
             logging.info(msg)
             print(msg)
             # save model and input/encoded/decoded

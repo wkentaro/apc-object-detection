@@ -38,11 +38,17 @@ def blob_to_im(blob):
     return im
 
 
-def snack():
-    here = osp.dirname(osp.abspath(__file__))
-    return imread(osp.join(here, 'data/snack.jpg'))
+def mask_to_roi(mask):
+    where = np.argwhere(mask)
+    (y_min, x_min), (y_max, x_max) = where.min(0), where.max(0) + 1
+    return y_min, x_min, y_max, x_max
 
 
 def doll():
     here = osp.dirname(osp.abspath(__file__))
     return imread(osp.join(here, 'data/doll.jpg'))
+
+
+def doll_mask():
+    here = osp.dirname(osp.abspath(__file__))
+    return imread(osp.join(here, 'data/doll_mask.jpg'))

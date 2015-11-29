@@ -9,7 +9,7 @@ import numpy as np
 
 from skimage.transform import resize
 
-from apc_od.data import snack
+from apc_od.data import doll
 from apc_od import im_to_blob
 from apc_od.models import VGG_mini_ABN
 
@@ -21,7 +21,7 @@ class TestVGG_mini_ABN(unittest.TestCase):
         self.optimizer = O.Adam()
         self.optimizer.setup(self.model)
 
-        img = snack()
+        img = doll()
         img = resize(img, (128, 128), preserve_range=True)
         x_data = np.array([im_to_blob(img)])
         y_data = np.array([0], dtype=np.int32)

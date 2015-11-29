@@ -9,16 +9,22 @@ import os.path as osp
 import pickle
 import sys
 
+import matplotlib
+matplotlib.use('Agg')
+
 from chainer import cuda
 from chainer import optimizers as O
 from chainer import serializers
 from chainer import Variable
-import cv2
 import numpy as np
+from skimage.io import imread
+from skimage.transform import resize
 
 from apc_od import get_raw
 from apc_od import im_preprocess
 from apc_od import im_to_blob
+from apc_od import mask_to_roi
+from apc_od import raw_to_mask_path
 from draw_loss import draw_loss_curve
 from tile_ae_encoded import tile_ae_encoded
 from tile_ae_inout import tile_ae_inout
@@ -29,9 +35,11 @@ here = osp.dirname(osp.abspath(__file__))
 
 class Trainer(object):
 
-    def __init__(self, model, is_supervised, log_dir, log_file, on_gpu):
+    def __init__(self, model, is_supervised, crop_roi,
+                 log_dir, log_file, on_gpu):
         self.model = model
         self.is_supervised = is_supervised
+        self.crop_roi = crop_roi
         self.log_dir = log_dir
         self.log_file = log_file
         self.on_gpu = on_gpu
@@ -43,18 +51,26 @@ class Trainer(object):
         self.optimizer.setup(self.model)
 
     def batch_loop(self, dataset, train, batch_size=10):
-        files = dataset.filenames
-        target = dataset.target
-        N = len(files)
+        N = len(dataset.filenames)
+        # compose x_data
+        x_data = []
+        for raw_path in dataset.filenames:
+            raw = im_preprocess(imread(raw_path))
+            if self.crop_roi:
+                mask_path = raw_to_mask_path(raw_path)
+                roi = mask_to_roi(im_preprocess(imread(mask_path)))
+                raw = raw[roi[0]:roi[2], roi[1]:roi[3]]
+                raw = resize(raw, (128, 128), preserve_range=True)
+            x_data.append(im_to_blob(raw))
+        x_data = np.array(x_data, dtype=np.float32)
+        y_data = dataset.target.astype(np.int32)
         # train loop
         sum_loss = 0
         sum_accuracy = 0 if self.is_supervised else None
         perm = np.random.permutation(N)
         for i in range(0, N, batch_size):
-            files_batch = files[perm[i:i + batch_size]]
-            x_batch = np.array([im_to_blob(im_preprocess(cv2.imread(f)))
-                                for f in files_batch])
-            y_batch = target[perm[i:i + batch_size]].astype(np.int32)
+            x_batch = x_data[perm[i:i + batch_size]]
+            y_batch = y_data[perm[i:i + batch_size]]
             if self.on_gpu:
                 x_batch = cuda.to_gpu(x_batch)
                 y_batch = cuda.to_gpu(y_batch)
@@ -158,11 +174,13 @@ def main():
     save_interval = args.save_interval
     is_supervised = True if args.supervised_or_not == 'supervised' else False
 
+    save_encoded = False
+    crop_roi = False
     if is_supervised:
         if args.model == 'VGG_mini_ABN':
             from apc_od.models import VGG_mini_ABN
             model = VGG_mini_ABN()
-            save_encoded = False
+            crop_roi = True
         else:
             sys.stderr.write('Unsupported model: {}\n'.format(args.model))
             sys.exit(1)
@@ -175,7 +193,6 @@ def main():
         elif args.model == 'CAEOnes':
             from apc_od.models import CAEOnes
             model = CAEOnes()
-            save_encoded = False
         elif args.model == 'CAEPool':
             from apc_od.models import CAEPool
             model = CAEPool()
@@ -207,6 +224,7 @@ def main():
     trainer = Trainer(
         model=model,
         is_supervised=is_supervised,
+        crop_roi=crop_roi,
         log_dir=log_dir,
         log_file=log_file,
         on_gpu=True,

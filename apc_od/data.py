@@ -41,13 +41,9 @@ def blob_to_im(blob):
 
 
 def mask_to_roi(mask):
-    prop = regionprops(mask)[0]
-    y0, x0 = prop.centroid
-    x1 = x0 + math.cos(prop.orientation) * 0.5 * prop.major_axis_length
-    y1 = y0 - math.sin(prop.orientation) * 0.5 * prop.major_axis_length
-    x2 = x0 - math.sin(prop.orientation) * 0.5 * prop.minor_axis_length
-    y2 = y0 - math.cos(prop.orientation) * 0.5 * prop.minor_axis_length
-    return y1, x1, y2, x2
+    where = np.argwhere(mask)
+    (y_min, x_min), (y_max, x_max) = where.min(0), where.max(0) + 1
+    return y_min, x_min, y_max, x_max
 
 
 def doll():

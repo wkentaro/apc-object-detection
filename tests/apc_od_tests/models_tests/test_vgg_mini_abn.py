@@ -24,7 +24,7 @@ class TestVGG_mini_ABN(unittest.TestCase):
         img = snack()
         img = resize(img, (128, 128), preserve_range=True)
         x_data = np.array([im_to_blob(img)])
-        y_data = np.array([0, 0])
+        y_data = np.array([0], dtype=np.int32)
         self.x = Variable(x_data)
         self.y = Variable(y_data)
 

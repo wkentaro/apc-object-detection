@@ -15,7 +15,6 @@ from chainer import serializers
 from chainer import Variable
 import cv2
 import numpy as np
-from sklearn.preprocessing import LabelBinarizer
 
 from apc_od import get_raw
 from apc_od import im_preprocess
@@ -45,9 +44,7 @@ class Trainer(object):
 
     def batch_loop(self, dataset, train, batch_size=10):
         files = dataset.filenames
-        lb = LabelBinarizer()
-        lb.fit(np.unique(dataset.target))
-        y_data = lb.transform(dataset.target)
+        target = dataset.target
         N = len(files)
         # train loop
         sum_loss = 0
@@ -55,11 +52,12 @@ class Trainer(object):
         perm = np.random.permutation(N)
         for i in range(0, N, batch_size):
             files_batch = files[perm[i:i + batch_size]]
-            y_batch = y_data[perm[i:i + batch_size]]
             x_batch = np.array([im_to_blob(im_preprocess(cv2.imread(f)))
                                 for f in files_batch])
+            y_batch = target[perm[i:i + batch_size]].astype(np.int32)
             if self.on_gpu:
-                x_batch = cuda.to_gpu(x_batch.astype(np.float32))
+                x_batch = cuda.to_gpu(x_batch)
+                y_batch = cuda.to_gpu(y_batch)
             x = Variable(x_batch, volatile=not train)
             y = Variable(y_batch, volatile=not train)
             if self.is_supervised:

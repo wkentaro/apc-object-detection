@@ -44,7 +44,7 @@ class Trainer(object):
 
     def batch_loop(self, dataset, train, batch_size=10):
         files = dataset.filenames
-        y = dataset.targets
+        target = dataset.target
         N = len(files)
         # train loop
         sum_loss = 0
@@ -52,11 +52,12 @@ class Trainer(object):
         perm = np.random.permutation(N)
         for i in range(0, N, batch_size):
             files_batch = files[perm[i:i + batch_size]]
-            y_batch = y[perm[i:i + batch_size]]
             x_batch = np.array([im_to_blob(im_preprocess(cv2.imread(f)))
                                 for f in files_batch])
+            y_batch = target[perm[i:i + batch_size]].astype(np.int32)
             if self.on_gpu:
-                x_batch = cuda.to_gpu(x_batch.astype(np.float32))
+                x_batch = cuda.to_gpu(x_batch)
+                y_batch = cuda.to_gpu(y_batch)
             x = Variable(x_batch, volatile=not train)
             y = Variable(y_batch, volatile=not train)
             if self.is_supervised:
@@ -64,17 +65,17 @@ class Trainer(object):
             else:
                 inputs = [x]
             self.optimizer.zero_grads()
-            loss, x_hat = self.model(*inputs)
+            loss, y = self.model(*inputs, train=train)
             loss.backward()
             self.optimizer.update()
             sum_loss += float(loss.data)
             if self.is_supervised:
                 sum_accuracy += float(loss.data)
-        x_hat_data = x_hat.data
+        y_data = y.data
         if self.on_gpu:
             x_batch = cuda.to_cpu(x_batch)
-            x_hat_data = cuda.to_cpu(x_hat_data)
-        return sum_loss, sum_accuracy, x_batch, x_hat_data
+            y_data = cuda.to_cpu(y_data)
+        return sum_loss, sum_accuracy, x_batch, y_data
 
     def main_loop(self, n_epoch=10, save_interval=None, save_encoded=True):
         save_interval = save_interval or (n_epoch // 10)
@@ -95,8 +96,8 @@ class Trainer(object):
             logging.info(msg)
             print(msg)
             # test
-            sum_loss, sum_accuracy, x, x_hat = self.batch_loop(test_data,
-                                                               train=False)
+            sum_loss, sum_accuracy, x_data, y_data = \
+                self.batch_loop(test_data, train=False)
             # logging
             mean_loss = sum_loss / N_test
             if self.is_supervised:
@@ -117,15 +118,18 @@ class Trainer(object):
                 # save x_data
                 x_path = osp.join(self.log_dir, 'x_{}.pkl'.format(epoch))
                 with open(x_path, 'wb') as f:
-                    pickle.dump(x, f)  # save x
-                x_hat_path = osp.join(
-                    self.log_dir, 'x_hat_{}.pkl'.format(epoch))
-                with open(x_hat_path, 'wb') as f:
-                    pickle.dump(x_hat, f)  # save x_hat
-                tile_ae_inout(x, x_hat,
-                              osp.join(self.log_dir, 'X_{}.jpg'.format(epoch)))
-                z = self.model.encode(Variable(cuda.to_gpu(x), volatile=True))
+                    pickle.dump(x_data, f)  # save x
+                if not self.is_supervised:
+                    x_hat_path = osp.join(self.log_dir,
+                                          'x_hat_{}.pkl'.format(epoch))
+                    with open(x_hat_path, 'wb') as f:
+                        pickle.dump(y_data, f)  # save x_hat
+                    tile_ae_inout(
+                        x_data, y_data,
+                        osp.join(self.log_dir, 'X_{}.jpg'.format(epoch)))
                 if save_encoded:
+                    x = Variable(cuda.to_gpu(x_data), volatile=True)
+                    z = self.model.encode(x)
                     tile_ae_encoded(
                         cuda.to_cpu(z.data),
                         osp.join(self.log_dir,

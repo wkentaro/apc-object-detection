@@ -27,7 +27,7 @@ class CAEOnes(chainer.Chain):
         self.loss = None
         self.pool1_outshape = None
 
-    def __call__(self, x):
+    def __call__(self, x, train):
         # encode
         z = self.encode(x)
         xp = cuda.get_array_module(z.data)

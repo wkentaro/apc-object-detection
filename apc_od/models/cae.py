@@ -19,7 +19,7 @@ class CAE(chainer.Chain):
         self.y = None
         self.loss = None
 
-    def __call__(self, x):
+    def __call__(self, x, train):
         h = self.encode(x)
         self.y = self.decode(h)
         self.loss = F.mean_squared_error(x, self.y)

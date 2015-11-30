@@ -74,8 +74,9 @@ class Trainer(object):
             if self.on_gpu:
                 x_batch = cuda.to_gpu(x_batch)
                 y_batch = cuda.to_gpu(y_batch)
-            x = Variable(x_batch, volatile=not train)
-            y = Variable(y_batch, volatile=not train)
+            volatile = 'off' if train else 'on'
+            x = Variable(x_batch, volatile=volatile)
+            y = Variable(y_batch, volatile=volatile)
             if self.is_supervised:
                 inputs = [x, y]
             else:

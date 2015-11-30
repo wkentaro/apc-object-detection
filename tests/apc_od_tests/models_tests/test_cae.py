@@ -5,6 +5,7 @@ import unittest
 
 from chainer import optimizers as O
 from chainer import Variable
+from nose.tools import assert_is_not_none
 import numpy as np
 
 from apc_od.data import doll
@@ -26,13 +27,17 @@ class TestCAE(unittest.TestCase):
 
     def test_train(self):
         self.optimizer.zero_grads()
-        loss, x_hat = self.model(self.x, train=True)
-        loss.backward()
-        self.optimizer.update()
+        self.model.train = True
+        self.optimizer.update(self.model, self.x)
+        assert_is_not_none(self.model.z)
+        assert_is_not_none(self.model.y)
+        assert_is_not_none(self.model.loss)
 
     def test_encode(self):
+        self.model.train = False
         self.model.encode(self.x)
 
     def test_decode(self):
+        self.model.train = False
         h = self.model.encode(self.x)
         self.model.decode(h)

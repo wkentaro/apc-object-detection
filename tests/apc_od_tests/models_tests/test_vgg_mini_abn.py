@@ -5,6 +5,7 @@ import unittest
 
 from chainer import optimizers as O
 from chainer import Variable
+from nose.tools import assert_is_not_none
 import numpy as np
 
 from skimage.transform import resize
@@ -30,6 +31,8 @@ class TestVGG_mini_ABN(unittest.TestCase):
 
     def test_train(self):
         self.optimizer.zero_grads()
-        loss, accuracy, _ = self.model(self.x, self.y, train=True)
-        loss.backward()
-        self.optimizer.update()
+        self.model.train = True
+        self.optimizer.update(self.model, self.x, self.y)
+        assert_is_not_none(self.model.loss)
+        assert_is_not_none(self.model.accuracy)
+        assert_is_not_none(self.model.y)

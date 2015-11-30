@@ -31,31 +31,33 @@ class VGG_mini_ABN(chainer.Chain):
             fc5=L.Linear(4096, 1024),
             fc6=L.Linear(1024, 3)
         )
+        self.train = True
         self.name = 'VGG_mini_ABN'
         self.loss = None
         self.accuracy = None
+        self.y = None
 
-    def __call__(self, x, y, train):
-        h = F.relu(self.bn1_1(self.conv1_1(x), test=not train))
-        h = F.relu(self.bn1_2(self.conv1_2(h), test=not train))
+    def __call__(self, x, t):
+        h = F.relu(self.bn1_1(self.conv1_1(x), test=not self.train))
+        h = F.relu(self.bn1_2(self.conv1_2(h), test=not self.train))
         h = F.max_pooling_2d(h, 3, stride=3)
-        h = F.dropout(h, ratio=0.25, train=train)
+        h = F.dropout(h, ratio=0.25, train=self.train)
 
-        h = F.relu(self.bn2_1(self.conv2_1(h), test=not train))
-        h = F.relu(self.bn2_2(self.conv2_2(h), test=not train))
+        h = F.relu(self.bn2_1(self.conv2_1(h), test=not self.train))
+        h = F.relu(self.bn2_2(self.conv2_2(h), test=not self.train))
         h = F.max_pooling_2d(h, 3, stride=3)
-        h = F.dropout(h, ratio=0.25, train=train)
+        h = F.dropout(h, ratio=0.25, train=self.train)
 
-        h = F.relu(self.bn3_1(self.conv3_1(h), test=not train))
-        h = F.relu(self.bn3_2(self.conv3_2(h), test=not train))
+        h = F.relu(self.bn3_1(self.conv3_1(h), test=not self.train))
+        h = F.relu(self.bn3_2(self.conv3_2(h), test=not self.train))
         h = F.max_pooling_2d(h, 3, stride=3)
-        h = F.dropout(h, ratio=0.25, train=train)
+        h = F.dropout(h, ratio=0.25, train=self.train)
 
-        h = F.dropout(F.relu(self.fc4(h)), ratio=0.5, train=train)
-        h = F.dropout(F.relu(self.fc5(h)), ratio=0.5, train=train)
+        h = F.dropout(F.relu(self.fc4(h)), ratio=0.5, train=self.train)
+        h = F.dropout(F.relu(self.fc5(h)), ratio=0.5, train=self.train)
         h = self.fc6(h)
 
-        self.loss = F.softmax_cross_entropy(h, y)
-        self.accuracy = F.accuracy(h, y)
-        y_pred = h
-        return self.loss, self.accuracy, y_pred
+        self.loss = F.softmax_cross_entropy(h, t)
+        self.accuracy = F.accuracy(h, t)
+        self.y = h
+        return self.loss

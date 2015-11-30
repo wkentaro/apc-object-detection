@@ -22,22 +22,25 @@ class CAEOnes(chainer.Chain):
             deconv2_1=L.Deconvolution2D(16, 64, 3, stride=2, pad=1),
             deconv2_2=L.Deconvolution2D(64, 3, 3, stride=2, pad=1),
         )
+        self.train = True
         self.name = 'cae_ones'
+        self.z = None
         self.y = None
         self.loss = None
         self.pool1_outshape = None
 
-    def __call__(self, x, train):
+    def __call__(self, x):
         # encode
-        z = self.encode(x)
-        xp = cuda.get_array_module(z.data)
-        z_t = Variable(xp.ones_like(z.data), volatile=z.volatile)
-        loss_z = F.mean_squared_error(z, z_t)
+        self.z = self.encode(x)
+        xp = cuda.get_array_module(self.z.data)
+        volatile = 'off' if self.train else 'on'
+        z_t = Variable(xp.ones_like(self.z.data), volatile=volatile)
+        loss_z = F.mean_squared_error(self.z, z_t)
         # decode
-        self.y = self.decode(z)
+        self.y = self.decode(self.z)
         loss_y = F.mean_squared_error(x, self.y)
         self.loss = loss_z + loss_y
-        return self.loss, self.y
+        return self.loss
 
     def encode(self, x):
         h = x

@@ -15,15 +15,17 @@ class CAEPool(chainer.Chain):
             deconv2=L.Deconvolution2D(64, 3, 2, stride=2, pad=1,
                                       outsize=(178, 267)),
         )
+        self.train = True
         self.name = 'cae_pool'
+        self.z = None
         self.y = None
         self.loss = None
 
-    def __call__(self, x, train):
-        z = self.encode(x)
-        self.y = self.decode(z)
+    def __call__(self, x):
+        self.z = self.encode(x)
+        self.y = self.decode(self.z)
         self.loss = F.mean_squared_error(x, self.y)
-        return self.loss, self.y
+        return self.loss
 
     def encode(self, x):
         h = self.conv1(x)

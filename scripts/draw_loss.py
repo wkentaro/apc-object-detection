@@ -20,19 +20,19 @@ def draw_loss_curve(logfile, outfile, no_acc):
         line = line.strip()
         if 'epoch:' not in line:
             continue
-        epoch = int(re.search('epoch:([0-9]+);', line).groups()[0])
+        epoch = int(re.search('epoch:([0-9]+?);', line).groups()[0])
         if 'train' in line:
-            tr_l = float(re.search('loss=(.+);', line).groups()[0])
+            tr_l = float(re.search('loss=(.+?);', line).groups()[0])
             train_loss.append([epoch, tr_l])
             if not no_acc:
-                tr_a = float(re.search('accuracy=([0-9\.]+);', line)
+                tr_a = float(re.search('accuracy=([0-9\.]+?);', line)
                              .groups()[0])
                 train_acc.append([epoch, tr_a])
         if 'test' in line:
-            te_l = float(re.search('loss=(.+);', line).groups()[0])
+            te_l = float(re.search('loss=(.+?);', line).groups()[0])
             test_loss.append([epoch, te_l])
             if not no_acc:
-                te_a = float(re.search('accuracy=([0-9\.]+);', line)
+                te_a = float(re.search('accuracy=([0-9\.]+?);', line)
                              .groups()[0])
                 test_acc.append([epoch, te_a])
 

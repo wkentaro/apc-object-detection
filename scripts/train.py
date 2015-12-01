@@ -50,20 +50,8 @@ class Trainer(object):
         self.optimizer = O.Adam(alpha=0.001)
         self.optimizer.setup(self.model)
 
-    def batch_loop(self, dataset, train, batch_size=10):
-        N = len(dataset.filenames)
-        # compose x_data
-        x_data = []
-        for raw_path in dataset.filenames:
-            raw = im_preprocess(imread(raw_path))
-            if self.crop_roi:
-                mask_path = raw_to_mask_path(raw_path)
-                roi = mask_to_roi(im_preprocess(imread(mask_path)))
-                raw = raw[roi[0]:roi[2], roi[1]:roi[3]]
-                raw = resize(raw, (128, 128), preserve_range=True)
-            x_data.append(im_to_blob(raw))
-        x_data = np.array(x_data, dtype=np.float32)
-        y_data = dataset.target.astype(np.int32)
+    def batch_loop(self, x_data, y_data, train, batch_size=10):
+        N = len(x_data)
         # train loop
         sum_loss = 0
         sum_accuracy = 0 if self.is_supervised else None
@@ -77,25 +65,39 @@ class Trainer(object):
             volatile = 'off' if train else 'on'
             x = Variable(x_batch, volatile=volatile)
             y = Variable(y_batch, volatile=volatile)
+            self.optimizer.zero_grads()
             if self.is_supervised:
                 inputs = [x, y]
             else:
                 inputs = [x]
-            self.optimizer.zero_grads()
-            if self.is_supervised:
-                loss, accuracy, y_pred = self.model(*inputs, train=train)
+            self.model.train = train
+            if train:
+                self.optimizer.update(self.model, *inputs)
             else:
-                loss, y_pred = self.model(*inputs, train=train)
-            loss.backward()
-            self.optimizer.update()
-            sum_loss += float(loss.data)
+                self.model(*inputs)
+            sum_loss += float(self.model.loss.data)
             if self.is_supervised:
-                sum_accuracy += float(accuracy.data)
-        y_data = y_pred.data
+                sum_accuracy += float(self.model.accuracy.data)
+        y_data = self.model.y.data
         if self.on_gpu:
             x_batch = cuda.to_cpu(x_batch)
             y_data = cuda.to_cpu(y_data)
         return sum_loss, sum_accuracy, x_batch, y_data
+
+    def dataset_to_xy_data(self, dataset):
+        """Convert dataset to x_data and y_data"""
+        x_data = []
+        for raw_path in dataset.filenames:
+            raw = im_preprocess(imread(raw_path))
+            if self.crop_roi:
+                mask_path = raw_to_mask_path(raw_path)
+                roi = mask_to_roi(im_preprocess(imread(mask_path)))
+                raw = raw[roi[0]:roi[2], roi[1]:roi[3]]
+                raw = resize(raw, (128, 128), preserve_range=True)
+            x_data.append(im_to_blob(raw))
+        x_data = np.array(x_data, dtype=np.float32)
+        y_data = dataset.target.astype(np.int32)
+        return x_data, y_data
 
     def main_loop(self, n_epoch=10, save_interval=None, save_encoded=True):
         save_interval = save_interval or (n_epoch // 10)
@@ -103,11 +105,12 @@ class Trainer(object):
         test_data = get_raw(which_set='test')
         N_train = len(train_data.filenames)
         N_test = len(test_data.filenames)
+        train_x, train_y = self.dataset_to_xy_data(train_data)
+        test_x, test_y = self.dataset_to_xy_data(test_data)
         for epoch in xrange(0, n_epoch):
             # train
-            sum_loss, sum_accuracy, _, _ = self.batch_loop(train_data,
-                                                           train=True)
-            # logging
+            sum_loss, sum_accuracy, _, _ = \
+                self.batch_loop(train_x, train_y, train=True)
             mean_loss = sum_loss / N_train
             msg = 'epoch:{:02d}; train mean loss={};'.format(epoch, mean_loss)
             if self.is_supervised:
@@ -117,8 +120,7 @@ class Trainer(object):
             print(msg)
             # test
             sum_loss, sum_accuracy, x_data, y_data = \
-                self.batch_loop(test_data, train=False)
-            # logging
+                self.batch_loop(test_x, test_y, train=False)
             mean_loss = sum_loss / N_test
             msg = 'epoch:{:02d}; test mean loss={};'.format(epoch, mean_loss)
             if self.is_supervised:

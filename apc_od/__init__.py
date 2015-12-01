@@ -3,6 +3,7 @@
 
 import apc_od.data
 import apc_od.dataset
+import apc_od.draw
 import apc_od.imaging
 
 
@@ -17,6 +18,10 @@ mask_to_roi = apc_od.data.mask_to_roi
 
 get_raw = apc_od.dataset.get_raw
 raw_to_mask_path = apc_od.dataset.raw_to_mask_path
+
+
+tile_ae_encoded = apc_od.draw.tile_ae_encoded
+tile_ae_inout = apc_od.draw.tile_ae_inout
 
 
 tile_slices_to_image = apc_od.imaging.tile_slices_to_image

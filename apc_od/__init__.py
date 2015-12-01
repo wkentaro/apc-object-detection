@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import matplotlib
+matplotlib.use('Agg')
+
 import apc_od.data
 import apc_od.dataset
 import apc_od.draw
@@ -20,6 +23,7 @@ get_raw = apc_od.dataset.get_raw
 raw_to_mask_path = apc_od.dataset.raw_to_mask_path
 
 
+draw_loss_curve = apc_od.draw.draw_loss_curve
 tile_ae_encoded = apc_od.draw.tile_ae_encoded
 tile_ae_inout = apc_od.draw.tile_ae_inout
 

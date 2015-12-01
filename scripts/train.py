@@ -27,7 +27,7 @@ from apc_od import mask_to_roi
 from apc_od import raw_to_mask_path
 from apc_od import tile_ae_encoded
 from apc_od import tile_ae_inout
-from draw_loss import draw_loss_curve
+from apc_od import draw_loss_curve
 
 
 here = osp.dirname(osp.abspath(__file__))

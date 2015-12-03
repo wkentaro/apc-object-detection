@@ -4,14 +4,14 @@
 import os
 import re
 
-import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from skimage.io import imsave
 
-from apc_od.utils import atleast_4d
 from apc_od.data import blob_to_im
-from apc_od.imaging import tile_slices_to_image_uint8
 from apc_od.imaging import tile_slices_to_image
+from apc_od.imaging import tile_slices_to_image_uint8
+from apc_od.utils import atleast_4d
 
 
 def tile_ae_inout(x, x_hat, output_file):
@@ -23,7 +23,7 @@ def tile_ae_inout(x, x_hat, output_file):
     tiled_img = np.array(tiled_img)  # PIL image -> numpy.ndarray
 
     # save tiled image
-    cv2.imwrite(output_file, tiled_img)
+    imsave(output_file, tiled_img)
 
 
 def tile_ae_encoded(z_data, filename):
@@ -32,7 +32,7 @@ def tile_ae_encoded(z_data, filename):
         tile_img = np.array(tile_slices_to_image(zi))
         base, ext = os.path.splitext(filename)
         filename_ = '{base}_{id}{ext}'.format(base=base, id=i, ext=ext)
-        cv2.imwrite(filename_, tile_img)
+        imsave(filename_, tile_img)
 
 
 def draw_loss_curve(logfile, outfile, no_acc):

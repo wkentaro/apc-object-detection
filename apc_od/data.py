@@ -39,6 +39,11 @@ def blob_to_im(blob):
 
 
 def mask_to_roi(mask):
+    """Convert mask to ROI.
+
+    @returns: tuple of int values
+        y_min, x_min, y_max, x_max
+    """
     where = np.argwhere(mask)
     (y_min, x_min), (y_max, x_max) = where.min(0), where.max(0) + 1
     return y_min, x_min, y_max, x_max

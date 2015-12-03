@@ -9,4 +9,3 @@ def atleast_4d(x):
     if len(x.shape) == 3:
         x = np.array([x])
     return x
-

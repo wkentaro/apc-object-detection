@@ -20,6 +20,7 @@ import numpy as np
 from skimage.io import imread
 from skimage.transform import resize
 
+from apc_od import draw_loss_curve
 from apc_od import get_raw
 from apc_od import im_preprocess
 from apc_od import im_to_blob
@@ -27,7 +28,6 @@ from apc_od import mask_to_roi
 from apc_od import raw_to_mask_path
 from apc_od import tile_ae_encoded
 from apc_od import tile_ae_inout
-from apc_od import draw_loss_curve
 
 
 here = osp.dirname(osp.abspath(__file__))

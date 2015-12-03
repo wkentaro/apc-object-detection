@@ -205,6 +205,10 @@ def main():
             from apc_od.models import CAEPool
             model = CAEPool()
             save_encoded = True
+        elif args.model == 'StackedCAE':
+            from apc_od.models import StackedCAE
+            model = StackedCAE()
+            save_encoded = True
         else:
             sys.stderr.write('Unsupported model: {}\n'.format(args.model))
             sys.exit(1)

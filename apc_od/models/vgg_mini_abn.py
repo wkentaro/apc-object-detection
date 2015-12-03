@@ -70,6 +70,6 @@ class VGG_mini_ABN(chainer.Chain):
             self.accuracy = F.accuracy(h, t)
             return self.loss
 
-        assert self.train == False
+        assert self.train is False
         self.pred = F.softmax(self.y)
         return self.pred

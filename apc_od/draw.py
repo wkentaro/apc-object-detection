@@ -8,10 +8,10 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-from apc_od.utils import atleast_4d
 from apc_od.data import blob_to_im
-from apc_od.imaging import tile_slices_to_image_uint8
 from apc_od.imaging import tile_slices_to_image
+from apc_od.imaging import tile_slices_to_image_uint8
+from apc_od.utils import atleast_4d
 
 
 def tile_ae_inout(x, x_hat, output_file):

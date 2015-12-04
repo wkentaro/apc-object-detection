@@ -30,7 +30,7 @@ install:
 
 script:
   - flake8
-  - nosetests tests --with-coverage --cover-package=apc_od
+  - nosetests tests --with-coverage --cover-package=apc_od --exclude=test_cae_ones
 
 after_success:
   - coveralls

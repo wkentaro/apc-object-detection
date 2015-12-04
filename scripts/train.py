@@ -136,14 +136,14 @@ class Trainer(object):
                 # save model
                 model_path = osp.join(
                     self.log_dir,
-                    '{name}_model_{epoch}.h5'.format(name=self.model.name,
-                                                     epoch=epoch))
+                    '{name}_model_{epoch}.h5'.format(
+                        name=self.model.__str__(), epoch=epoch))
                 serializers.save_hdf5(model_path, self.model)
                 # save optimizer
                 opt_path = osp.join(
                     self.log_dir,
-                    '{name}_optimizer_{epoch}.h5'.format(name=self.model.name,
-                                                         epoch=epoch))
+                    '{name}_optimizer_{epoch}.h5'.format(
+                        name=self.model.__str__(), epoch=epoch))
                 serializers.save_hdf5(opt_path, self.optimizer)
                 # save x_data
                 x_path = osp.join(self.log_dir, 'x_{}.pkl'.format(epoch))

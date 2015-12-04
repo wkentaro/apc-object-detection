@@ -23,7 +23,6 @@ class CAEOnes(chainer.Chain):
             deconv2_2=L.Deconvolution2D(8, 3, 3, stride=2, pad=1),
         )
         self.train = True
-        self.name = 'cae_ones'
         self.z = None
         self.y = None
         self.loss = None

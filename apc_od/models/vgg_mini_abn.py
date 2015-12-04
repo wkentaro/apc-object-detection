@@ -34,7 +34,6 @@ class VGG_mini_ABN(chainer.Chain):
             fc6=L.Linear(512, 3)
         )
         self.train = True
-        self.name = 'VGG_mini_ABN'
         self.loss = None
         self.accuracy = None
         self.y = None

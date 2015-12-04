@@ -16,7 +16,6 @@ class CAEPool(chainer.Chain):
                                       outsize=(178, 267)),
         )
         self.train = True
-        self.name = 'cae_pool'
         self.z = None
         self.y = None
         self.loss = None

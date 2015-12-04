@@ -8,22 +8,22 @@ import chainer.links as L
 from chainer import Variable
 
 
-class CAEOnes(chainer.Chain):
-    """Convolutional Autoencoder for Ones"""
+class StackedCAE(chainer.Chain):
+    """Stacked Convolutional Autoencoder"""
 
     def __init__(self):
-        super(CAEOnes, self).__init__(
+        super(StackedCAE, self).__init__(
             conv1_1=L.Convolution2D(3, 8, 3, stride=2, pad=1),
             conv1_2=L.Convolution2D(8, 16, 3, stride=2, pad=1),
             linear1_1=L.Linear(11616, 4096),
-            linear1_2=L.Linear(4096, 4),
-            linear2_1=L.Linear(4, 4096),
+            linear1_2=L.Linear(4096, 4096),
+            linear2_1=L.Linear(4096, 4096),
             linear2_2=L.Linear(4096, 11616),
             deconv2_1=L.Deconvolution2D(16, 8, 3, stride=2, pad=1),
             deconv2_2=L.Deconvolution2D(8, 3, 3, stride=2, pad=1),
         )
         self.train = True
-        self.name = 'cae_ones'
+        self.name = 'stacked_cae'
         self.z = None
         self.y = None
         self.loss = None
@@ -54,17 +54,11 @@ class CAEOnes(chainer.Chain):
         self.pool1_inshape = h.data.shape
         h = F.max_pooling_2d(h, ksize=3, stride=2)
         self.pool1_outshape = h.data.shape
-        # linears
-        h = self.linear1_1(h)
-        h = self.linear1_2(h)
         z = h
         return z
 
     def decode(self, z):
         h = z
-        # linears
-        h = self.linear2_1(h)
-        h = self.linear2_2(h)
         # unpool1
         h = F.reshape(h, self.pool1_outshape)
         h = F.unpooling_2d(h, ksize=3, stride=2,

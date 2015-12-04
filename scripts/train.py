@@ -139,6 +139,12 @@ class Trainer(object):
                     '{name}_model_{epoch}.h5'.format(name=self.model.name,
                                                      epoch=epoch))
                 serializers.save_hdf5(model_path, self.model)
+                # save optimizer
+                opt_path = osp.join(
+                    self.log_dir,
+                    '{name}_optimizer_{epoch}.h5'.format(name=self.model.name,
+                                                         epoch=epoch))
+                serializers.save_hdf5(opt_path, self.optimizer)
                 # save x_data
                 x_path = osp.join(self.log_dir, 'x_{}.pkl'.format(epoch))
                 with open(x_path, 'wb') as f:
@@ -204,6 +210,10 @@ def main():
         elif args.model == 'CAEPool':
             from apc_od.models import CAEPool
             model = CAEPool()
+            save_encoded = True
+        elif args.model == 'StackedCAE':
+            from apc_od.models import StackedCAE
+            model = StackedCAE()
             save_encoded = True
         else:
             sys.stderr.write('Unsupported model: {}\n'.format(args.model))

@@ -35,11 +35,12 @@ here = osp.dirname(osp.abspath(__file__))
 
 class Trainer(object):
 
-    def __init__(self, model, is_supervised, crop_roi,
+    def __init__(self, model, is_supervised, crop_roi, batch_size,
                  log_dir, log_file, on_gpu):
         self.model = model
         self.is_supervised = is_supervised
         self.crop_roi = crop_roi
+        self.batch_size = batch_size
         self.log_dir = log_dir
         self.log_file = log_file
         self.on_gpu = on_gpu
@@ -50,15 +51,15 @@ class Trainer(object):
         self.optimizer = O.Adam(alpha=0.001)
         self.optimizer.setup(self.model)
 
-    def batch_loop(self, x_data, t_data, train, batch_size=10):
+    def batch_loop(self, x_data, t_data, train):
         N = len(x_data)
         # train loop
         sum_loss = 0
         sum_accuracy = 0 if self.is_supervised else None
         perm = np.random.permutation(N)
-        for i in range(0, N, batch_size):
-            x_batch = x_data[perm[i:i + batch_size]]
-            t_batch = t_data[perm[i:i + batch_size]]
+        for i in range(0, N, self.batch_size):
+            x_batch = x_data[perm[i:i + self.batch_size]]
+            t_batch = t_data[perm[i:i + self.batch_size]]
             if self.on_gpu:
                 x_batch = cuda.to_gpu(x_batch)
                 t_batch = cuda.to_gpu(t_batch)
@@ -75,9 +76,10 @@ class Trainer(object):
                 self.optimizer.update(self.model, *inputs)
             else:
                 self.model(*inputs)
-            sum_loss += batch_size * float(self.model.loss.data)
+            sum_loss += self.batch_size * float(self.model.loss.data)
             if self.is_supervised:
-                sum_accuracy += batch_size * float(self.model.accuracy.data)
+                sum_accuracy += \
+                    self.batch_size * float(self.model.accuracy.data)
         y_data = self.model.y.data
         if self.on_gpu:
             x_batch = cuda.to_cpu(x_batch)
@@ -188,6 +190,7 @@ def main():
     save_interval = args.save_interval
     is_supervised = True if args.supervised_or_not == 'supervised' else False
 
+    batch_size = 10
     save_encoded = False
     crop_roi = False
     if is_supervised:
@@ -195,6 +198,13 @@ def main():
             from apc_od.models import VGG_mini_ABN
             model = VGG_mini_ABN()
             crop_roi = True
+        elif args.model == 'CAEOnesRoiVGG':
+            from apc_od.models import CAEOnesRoiVGG
+            batch_size = 10
+            initial_roi = np.array([100, 130, 300, 400])
+            cae_ones_h5 = os.path.join(here, 'cae_ones_model.h5')
+            vgg_h5 = os.path.join(here, 'vgg_model.h5')
+            model = CAEOnesRoiVGG(initial_roi, cae_ones_h5, vgg_h5)
         else:
             sys.stderr.write('Unsupported model: {}\n'.format(args.model))
             sys.exit(1)
@@ -243,6 +253,7 @@ def main():
         model=model,
         is_supervised=is_supervised,
         crop_roi=crop_roi,
+        batch_size=batch_size,
         log_dir=log_dir,
         log_file=log_file,
         on_gpu=True,

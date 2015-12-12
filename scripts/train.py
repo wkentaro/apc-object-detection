@@ -26,6 +26,7 @@ from apc_od import im_preprocess
 from apc_od import im_to_blob
 from apc_od import mask_to_roi
 from apc_od import raw_to_mask_path
+from apc_od import roi_preprocess
 from apc_od import tile_ae_encoded
 from apc_od import tile_ae_inout
 
@@ -202,6 +203,7 @@ def main():
             from apc_od.models import CAEOnesRoiVGG
             batch_size = 10
             initial_roi = np.array([100, 130, 300, 400])
+            initial_roi = roi_preprocess(initial_roi)
             cae_ones_h5 = os.path.join(here, 'cae_ones_model.h5')
             vgg_h5 = os.path.join(here, 'vgg_model.h5')
             model = CAEOnesRoiVGG(initial_roi, cae_ones_h5, vgg_h5)

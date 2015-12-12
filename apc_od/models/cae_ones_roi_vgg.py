@@ -19,7 +19,7 @@ from apc_od.models.vgg_mini_abn import VGG_mini_ABN
 class CAEOnesRoiVGG(chainer.Chain):
 
     def __init__(self, initial_roi, cae_ones_h5, vgg_h5,
-                 learning_rate=1.1, learning_n_sample=100):
+                 learning_rate=0.1, learning_n_sample=10000):
         super(CAEOnesRoiVGG, self).__init__(
             cae_ones1=CAEOnes(),
             vgg2=VGG_mini_ABN(),
@@ -45,7 +45,9 @@ class CAEOnesRoiVGG(chainer.Chain):
 
         if t is None:
             assert self.train is False
-            rois_data = self.initial_roi * roi_scale.data
+            if on_gpu:
+                roi_scale_data = cuda.to_cpu(roi_scale.data)
+            rois_data = self.initial_roi * roi_scale_data
             if on_gpu:
                 rois_data = cuda.to_cpu(rois_data)
             x_data = cuda.to_cpu(x.data)
@@ -68,13 +70,13 @@ class CAEOnesRoiVGG(chainer.Chain):
         # randomly change the param and estimate good parameter for the task
         min_y = None
         rands_shape = [self.learning_n_sample] + list(roi_scale.data.shape)
-        rands = self.learning_rate * np.random.random(rands_shape)
+        rands = self.learning_rate * (2 * np.random.random(rands_shape) - 1) + 1
+        rands[0] = np.ones(roi_scale.data.shape)
         for i, rand in enumerate(rands):
-            rois_data = rand * (self.initial_roi * roi_scale.data)
             if on_gpu:
-                rois_data = cuda.to_cpu(rois_data)
+                roi_scale_data = cuda.to_cpu(roi_scale.data)
+            rois_data = rand * (self.initial_roi * roi_scale_data)
             x_data = cuda.to_cpu(x.data)
-
             skip = False
             rois_data = rois_data.astype(int)
             cropped = []
@@ -102,12 +104,16 @@ class CAEOnesRoiVGG(chainer.Chain):
                 min_y = h
                 min_loss = loss
                 min_rand = rand
+                min_rois = rois_data
             elif min_loss_data > float(loss.data):
                 min_loss_data = float(loss.data)
                 min_y = h
                 min_loss = loss
                 min_rand = rand
+                min_rois = rois_data
 
+        if on_gpu:
+            min_rand = cuda.to_gpu(min_rand)
         rois_data = min_rand * roi_scale.data
         xp = cuda.get_array_module(rois_data)
         rois_data = rois_data.astype(xp.float32)
@@ -117,4 +123,5 @@ class CAEOnesRoiVGG(chainer.Chain):
         loss2 = min_loss
 
         self.loss = loss1 + loss2
+        self.accuracy = F.accuracy(min_y, t)
         return self.loss

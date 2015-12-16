@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import collections
 import datetime
 import logging
 import os
@@ -36,8 +37,18 @@ here = osp.dirname(osp.abspath(__file__))
 
 class Trainer(object):
 
-    def __init__(self, model, is_supervised, crop_roi, batch_size,
-                 log_dir, log_file, on_gpu):
+    def __init__(
+            self,
+            optimizers,
+            model,
+            is_supervised,
+            crop_roi,
+            batch_size,
+            log_dir,
+            log_file,
+            on_gpu,
+            ):
+        self.optimizers = optimizers
         self.model = model
         self.is_supervised = is_supervised
         self.crop_roi = crop_roi
@@ -45,12 +56,6 @@ class Trainer(object):
         self.log_dir = log_dir
         self.log_file = log_file
         self.on_gpu = on_gpu
-        # setup model on gpu
-        if self.on_gpu:
-            self.model.to_gpu()
-        # optimizer
-        self.optimizer = O.Adam(alpha=0.001)
-        self.optimizer.setup(self.model)
 
     def batch_loop(self, x_data, t_data, train):
         N = len(x_data)
@@ -67,14 +72,19 @@ class Trainer(object):
             volatile = 'off' if train else 'on'
             x = Variable(x_batch, volatile=volatile)
             t = Variable(t_batch, volatile=volatile)
-            self.optimizer.zero_grads()
+            for i in xrange(len(self.optimizers)):
+                self.optimizers[i].zero_grads()
             if self.is_supervised:
                 inputs = [x, t]
             else:
                 inputs = [x]
             self.model.train = train
             if train:
-                self.optimizer.update(self.model, *inputs)
+                losses = self.model(*inputs)
+                if not isinstance(losses, collections.Sequence):
+                    losses = [losses]
+                for i, loss in enumerate(losses):
+                    self.optimizers[i].update(loss)
             else:
                 self.model(*inputs)
             sum_loss += self.batch_size * float(self.model.loss.data)
@@ -143,11 +153,12 @@ class Trainer(object):
                         name=self.model.__str__(), epoch=epoch))
                 serializers.save_hdf5(model_path, self.model)
                 # save optimizer
-                opt_path = osp.join(
-                    self.log_dir,
-                    '{name}_optimizer_{epoch}.h5'.format(
-                        name=self.model.__str__(), epoch=epoch))
-                serializers.save_hdf5(opt_path, self.optimizer)
+                for i, opt in enumerate(self.optimizers):
+                    opt_path = osp.join(
+                        self.log_dir,
+                        '{name}_optimizer_{epoch}_{i}.h5'.format(
+                            name=self.model.__str__(), epoch=epoch, i=i))
+                    serializers.save_hdf5(opt_path, opt)
                 # save x_data
                 x_path = osp.join(self.log_dir, 'x_{}.pkl'.format(epoch))
                 with open(x_path, 'wb') as f:
@@ -191,22 +202,40 @@ def main():
     save_interval = args.save_interval
     is_supervised = True if args.supervised_or_not == 'supervised' else False
 
+    on_gpu = True
+    is_pipeline = False
     batch_size = 10
     save_encoded = False
     crop_roi = False
+    optimizers = [O.Adam()]
     if is_supervised:
         if args.model == 'VGG_mini_ABN':
             from apc_od.models import VGG_mini_ABN
             model = VGG_mini_ABN()
             crop_roi = True
         elif args.model == 'CAEOnesRoiVGG':
-            from apc_od.models import CAEOnesRoiVGG
+            from apc_od.pipeline import CAEOnesRoiVGG
+            is_pipeline = True
             batch_size = 10
             initial_roi = np.array([100, 130, 300, 400])
             initial_roi = roi_preprocess(initial_roi)
-            cae_ones_h5 = os.path.join(here, 'cae_ones_model.h5')
-            vgg_h5 = os.path.join(here, 'vgg_model.h5')
-            model = CAEOnesRoiVGG(initial_roi, cae_ones_h5, vgg_h5)
+            # setup model
+            model = CAEOnesRoiVGG(initial_roi)
+            if on_gpu:
+                model.to_gpu()
+            optimizers = [O.Adam(), O.Adam()]
+            optimizers[0].setup(model.cae_ones1)
+            optimizers[1].setup(model.vgg2)
+            # load trained models
+            serializers.load_hdf5(os.path.join(here, 'cae_ones_model.h5'),
+                                  model.cae_ones1)
+            serializers.load_hdf5(os.path.join(here, 'vgg_model.h5'),
+                                  model.vgg2)
+            # load optimizers state
+            serializers.load_hdf5(os.path.join(here, 'cae_ones_optimizer.h5'),
+                                  optimizers[0])
+            serializers.load_hdf5(os.path.join(here, 'vgg_optimizer.h5'),
+                                  optimizers[1])
         else:
             sys.stderr.write('Unsupported model: {}\n'.format(args.model))
             sys.exit(1)
@@ -252,13 +281,14 @@ def main():
     print(msg)
 
     trainer = Trainer(
+        optimizers=optimizers,
         model=model,
         is_supervised=is_supervised,
         crop_roi=crop_roi,
         batch_size=batch_size,
         log_dir=log_dir,
         log_file=log_file,
-        on_gpu=True,
+        on_gpu=on_gpu,
     )
     trainer.main_loop(
         n_epoch=n_epoch,

@@ -25,8 +25,6 @@ class CAEOnesRoiVGG(Pipeline):
     def __init__(
             self,
             initial_roi,
-            cae_ones_h5,
-            vgg_h5,
             learning_rate=0.1,
             learning_n_sample=100
             ):
@@ -35,8 +33,6 @@ class CAEOnesRoiVGG(Pipeline):
             vgg2=VGG_mini_ABN(),
         )
         self.initial_roi = initial_roi
-        serializers.load_hdf5(cae_ones_h5, self.cae_ones1)
-        serializers.load_hdf5(vgg_h5, self.vgg2)
         self.learning_rate = learning_rate
         self.learning_n_sample = learning_n_sample
 

@@ -113,12 +113,11 @@ class CAEOnesRoiVGG(Pipeline):
         if on_gpu:
             roi_scale_data_with_rand = cuda.to_gpu(roi_scale_data_with_rand)
         roi_scale = Variable(roi_scale_data_with_rand, volatile=not self.train)
+        t0 = roi_scale
 
-        t_0 = roi_scale
-        t_n = self.x0_to_x1(x0=t, roi_scale=roi_scale)
+        x1 = self.x0_to_x1(x0=x, roi_scale=roi_scale)
 
-        X_est = [t_0, t_n]
-        return X_est
+        return t0, x1
 
     def __call__(self, x, t=None):
         self.cae_ones1.train = self.train
@@ -131,7 +130,6 @@ class CAEOnesRoiVGG(Pipeline):
             # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
             # testing fase
             # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-            assert self.train is False
             x1 = self.x0_to_x1(x0=x, roi_scale=roi_scale)
             self.vgg2(x1)
             self.y = self.vgg2.y
@@ -141,14 +139,12 @@ class CAEOnesRoiVGG(Pipeline):
         # training fase
         # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         # estimate better parameters
-        X_est = self.random_sample(x, t)
-        # get roi parameter
-        z = self.cae_ones1.encode(x)
+        t0, x1 = self.random_sample(x, t)
         # optimize roi parameter to be better
-        loss1 = F.mean_squared_error(z, X_est[0])
+        z = self.cae_ones1.encode(x)
+        loss1 = F.mean_squared_error(z, t0)
         # optimize regression parameter to be better
-        loss2 = self.vgg2(X_est[1], t)
+        loss2 = self.vgg2(x1, t)
 
-        y = self.vgg2.y
-        self.accuracy = F.accuracy(y, t)
+        self.accuracy = self.vgg2.accuracy
         return loss1, loss2

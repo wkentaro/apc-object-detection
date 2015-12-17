@@ -84,7 +84,8 @@ class Trainer(object):
                 if not isinstance(losses, collections.Sequence):
                     losses = [losses]
                 for i, loss in enumerate(losses):
-                    self.optimizers[i].update(loss)
+                    loss.backward()
+                    self.optimizers[i].update()
             else:
                 self.model(*inputs)
             sum_loss += self.batch_size * float(self.model.loss.data)
@@ -212,6 +213,9 @@ def main():
         if args.model == 'VGG_mini_ABN':
             from apc_od.models import VGG_mini_ABN
             model = VGG_mini_ABN()
+            if on_gpu:
+                model.to_gpu()
+            optimizers[0].setup(model)
             crop_roi = True
         elif args.model == 'CAEOnesRoiVGG':
             from apc_od.pipeline import CAEOnesRoiVGG
@@ -243,19 +247,31 @@ def main():
         # unsupervised
         if args.model == 'CAE':
             from apc_od.models import CAE
-            model = CAE()
             save_encoded = True
+            model = CAE()
+            if on_gpu:
+                model.to_gpu()
+            optimizers[0].setup(model)
         elif args.model == 'CAEOnes':
             from apc_od.models import CAEOnes
             model = CAEOnes()
+            if on_gpu:
+                model.to_gpu()
+            optimizers[0].setup(model)
         elif args.model == 'CAEPool':
             from apc_od.models import CAEPool
-            model = CAEPool()
             save_encoded = True
+            model = CAEPool()
+            if on_gpu:
+                model.to_gpu()
+            optimizers[0].setup(model)
         elif args.model == 'StackedCAE':
             from apc_od.models import StackedCAE
-            model = StackedCAE()
             save_encoded = True
+            model = StackedCAE()
+            if on_gpu:
+                model.to_gpu()
+            optimizers[0].setup(model)
         else:
             sys.stderr.write('Unsupported model: {}\n'.format(args.model))
             sys.exit(1)

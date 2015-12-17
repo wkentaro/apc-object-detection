@@ -52,7 +52,7 @@ class CAEOnesRoiVGG(Pipeline):
             roi = rois_data[i]
             im = blob_to_im(x0_data[i])
             im = im[roi[0]:roi[2], roi[1]:roi[3]]
-            if im.size() == 0:
+            if im.size == 0:
                 break
             im = resize(im, (128, 128), preserve_range=True)
             cropped.append(im_to_blob(im))

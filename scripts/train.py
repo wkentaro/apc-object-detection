@@ -60,7 +60,7 @@ class Trainer(object):
     def batch_loop(self, x_data, t_data, train):
         N = len(x_data)
         # train loop
-        sum_loss = 0
+        sum_loss = collections.defaultdict(float)
         sum_accuracy = 0 if self.is_supervised else None
         perm = np.random.permutation(N)
         for i in range(0, N, self.batch_size):
@@ -72,8 +72,8 @@ class Trainer(object):
             volatile = 'off' if train else 'on'
             x = Variable(x_batch, volatile=volatile)
             t = Variable(t_batch, volatile=volatile)
-            for i in xrange(len(self.optimizers)):
-                self.optimizers[i].zero_grads()
+            for j in xrange(len(self.optimizers)):
+                self.optimizers[j].zero_grads()
             if self.is_supervised:
                 inputs = [x, t]
             else:
@@ -83,12 +83,14 @@ class Trainer(object):
                 losses = self.model(*inputs)
                 if not isinstance(losses, collections.Sequence):
                     losses = [losses]
-                for i, loss in enumerate(losses):
+                for j, loss in enumerate(losses):
                     loss.backward()
-                    self.optimizers[i].update()
+                    self.optimizers[j].update()
             else:
                 self.model(*inputs)
-            sum_loss += self.batch_size * float(self.model.loss.data)
+                losses = [self.model.loss]
+            for j, loss in enumerate(losses):
+                sum_loss[j] += self.batch_size * float(loss.data)
             if self.is_supervised:
                 sum_accuracy += \
                     self.batch_size * float(self.model.accuracy.data)
@@ -137,13 +139,15 @@ class Trainer(object):
             # test
             sum_loss, sum_accuracy, x_batch, y_batch = \
                 self.batch_loop(test_x, test_t, train=False)
-            mean_loss = sum_loss / N_test
-            msg = 'epoch:{:02d}; test mean loss={};'.format(epoch, mean_loss)
-            if self.is_supervised:
-                mean_accuracy = sum_accuracy / N_test
-                msg += ' accuracy={};'.format(mean_accuracy)
-            logging.info(msg)
-            print(msg)
+            for loss_id, sl in sorted(sum_loss.items()):
+                mean_loss = sl / N_test
+                msg = 'epoch:{:02d}; test mean loss{}={};'\
+                    .format(loss_id, epoch, mean_loss)
+                if self.is_supervised:
+                    mean_accuracy = sum_accuracy / N_test
+                    msg += ' accuracy={};'.format(mean_accuracy)
+                logging.info(msg)
+                print(msg)
             # save model and input/encoded/decoded
             if epoch % save_interval == (save_interval - 1):
                 print('epoch:{:02d}; saving'.format(epoch))
@@ -180,9 +184,13 @@ class Trainer(object):
                         osp.join(self.log_dir,
                                  'x_encoded_{}.jpg'.format(epoch)))
 
-        draw_loss_curve(self.log_file,
-                        osp.join(self.log_dir, 'loss_curve.jpg'),
-                        no_acc=not self.is_supervised)
+        for i in xrange(len(self.optimizers)):
+            draw_loss_curve(
+                loss_id=i,
+                logfile=self.log_file,
+                outfile=osp.join(self.log_dir, 'loss_curve{}.jpg'.format(i)),
+                no_acc=not self.is_supervised,
+            )
 
 
 def main():

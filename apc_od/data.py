@@ -38,6 +38,10 @@ def blob_to_im(blob):
     return im
 
 
+def roi_preprocess(roi):
+    return roi // 2
+
+
 def mask_to_roi(mask):
     """Convert mask to ROI.
 

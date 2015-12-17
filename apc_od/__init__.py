@@ -17,6 +17,7 @@ im_preprocess = apc_od.data.im_preprocess
 im_to_blob = apc_od.data.im_to_blob
 blob_to_im = apc_od.data.blob_to_im
 mask_to_roi = apc_od.data.mask_to_roi
+roi_preprocess = apc_od.data.roi_preprocess
 
 
 get_raw = apc_od.dataset.get_raw

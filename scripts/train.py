@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import collections
 import datetime
 import logging
 import os
@@ -26,6 +27,7 @@ from apc_od import im_preprocess
 from apc_od import im_to_blob
 from apc_od import mask_to_roi
 from apc_od import raw_to_mask_path
+from apc_od import roi_preprocess
 from apc_od import tile_ae_encoded
 from apc_od import tile_ae_inout
 
@@ -35,49 +37,63 @@ here = osp.dirname(osp.abspath(__file__))
 
 class Trainer(object):
 
-    def __init__(self, model, is_supervised, crop_roi,
-                 log_dir, log_file, on_gpu):
+    def __init__(
+            self,
+            optimizers,
+            model,
+            is_supervised,
+            crop_roi,
+            batch_size,
+            log_dir,
+            log_file,
+            on_gpu,
+            ):
+        self.optimizers = optimizers
         self.model = model
         self.is_supervised = is_supervised
         self.crop_roi = crop_roi
+        self.batch_size = batch_size
         self.log_dir = log_dir
         self.log_file = log_file
         self.on_gpu = on_gpu
-        # setup model on gpu
-        if self.on_gpu:
-            self.model.to_gpu()
-        # optimizer
-        self.optimizer = O.Adam(alpha=0.001)
-        self.optimizer.setup(self.model)
 
-    def batch_loop(self, x_data, t_data, train, batch_size=10):
+    def batch_loop(self, x_data, t_data, train):
         N = len(x_data)
         # train loop
-        sum_loss = 0
+        sum_loss = collections.defaultdict(float)
         sum_accuracy = 0 if self.is_supervised else None
         perm = np.random.permutation(N)
-        for i in range(0, N, batch_size):
-            x_batch = x_data[perm[i:i + batch_size]]
-            t_batch = t_data[perm[i:i + batch_size]]
+        for i in range(0, N, self.batch_size):
+            x_batch = x_data[perm[i:i + self.batch_size]]
+            t_batch = t_data[perm[i:i + self.batch_size]]
             if self.on_gpu:
                 x_batch = cuda.to_gpu(x_batch)
                 t_batch = cuda.to_gpu(t_batch)
             volatile = 'off' if train else 'on'
             x = Variable(x_batch, volatile=volatile)
             t = Variable(t_batch, volatile=volatile)
-            self.optimizer.zero_grads()
+            for j in xrange(len(self.optimizers)):
+                self.optimizers[j].zero_grads()
             if self.is_supervised:
                 inputs = [x, t]
             else:
                 inputs = [x]
             self.model.train = train
             if train:
-                self.optimizer.update(self.model, *inputs)
+                losses = self.model(*inputs)
+                if not isinstance(losses, collections.Sequence):
+                    losses = [losses]
+                for j, loss in enumerate(losses):
+                    loss.backward()
+                    self.optimizers[j].update()
             else:
                 self.model(*inputs)
-            sum_loss += batch_size * float(self.model.loss.data)
+                losses = [self.model.loss]
+            for j, loss in enumerate(losses):
+                sum_loss[j] += self.batch_size * float(loss.data)
             if self.is_supervised:
-                sum_accuracy += batch_size * float(self.model.accuracy.data)
+                sum_accuracy += \
+                    self.batch_size * float(self.model.accuracy.data)
         y_data = self.model.y.data
         if self.on_gpu:
             x_batch = cuda.to_cpu(x_batch)
@@ -123,13 +139,15 @@ class Trainer(object):
             # test
             sum_loss, sum_accuracy, x_batch, y_batch = \
                 self.batch_loop(test_x, test_t, train=False)
-            mean_loss = sum_loss / N_test
-            msg = 'epoch:{:02d}; test mean loss={};'.format(epoch, mean_loss)
-            if self.is_supervised:
-                mean_accuracy = sum_accuracy / N_test
-                msg += ' accuracy={};'.format(mean_accuracy)
-            logging.info(msg)
-            print(msg)
+            for loss_id, sl in sorted(sum_loss.items()):
+                mean_loss = sl / N_test
+                msg = 'epoch:{:02d}; test mean loss{}={};'\
+                    .format(loss_id, epoch, mean_loss)
+                if self.is_supervised:
+                    mean_accuracy = sum_accuracy / N_test
+                    msg += ' accuracy={};'.format(mean_accuracy)
+                logging.info(msg)
+                print(msg)
             # save model and input/encoded/decoded
             if epoch % save_interval == (save_interval - 1):
                 print('epoch:{:02d}; saving'.format(epoch))
@@ -140,11 +158,12 @@ class Trainer(object):
                         name=self.model.__str__(), epoch=epoch))
                 serializers.save_hdf5(model_path, self.model)
                 # save optimizer
-                opt_path = osp.join(
-                    self.log_dir,
-                    '{name}_optimizer_{epoch}.h5'.format(
-                        name=self.model.__str__(), epoch=epoch))
-                serializers.save_hdf5(opt_path, self.optimizer)
+                for i, opt in enumerate(self.optimizers):
+                    opt_path = osp.join(
+                        self.log_dir,
+                        '{name}_optimizer_{epoch}_{i}.h5'.format(
+                            name=self.model.__str__(), epoch=epoch, i=i))
+                    serializers.save_hdf5(opt_path, opt)
                 # save x_data
                 x_path = osp.join(self.log_dir, 'x_{}.pkl'.format(epoch))
                 with open(x_path, 'wb') as f:
@@ -165,9 +184,13 @@ class Trainer(object):
                         osp.join(self.log_dir,
                                  'x_encoded_{}.jpg'.format(epoch)))
 
-        draw_loss_curve(self.log_file,
-                        osp.join(self.log_dir, 'loss_curve.jpg'),
-                        no_acc=not self.is_supervised)
+        for i in xrange(len(self.optimizers)):
+            draw_loss_curve(
+                loss_id=i,
+                logfile=self.log_file,
+                outfile=osp.join(self.log_dir, 'loss_curve{}.jpg'.format(i)),
+                no_acc=not self.is_supervised,
+            )
 
 
 def main():
@@ -188,13 +211,43 @@ def main():
     save_interval = args.save_interval
     is_supervised = True if args.supervised_or_not == 'supervised' else False
 
+    on_gpu = True
+    is_pipeline = False
+    batch_size = 10
     save_encoded = False
     crop_roi = False
+    optimizers = [O.Adam()]
     if is_supervised:
         if args.model == 'VGG_mini_ABN':
             from apc_od.models import VGG_mini_ABN
             model = VGG_mini_ABN()
+            if on_gpu:
+                model.to_gpu()
+            optimizers[0].setup(model)
             crop_roi = True
+        elif args.model == 'CAEOnesRoiVGG':
+            from apc_od.pipeline import CAEOnesRoiVGG
+            is_pipeline = True
+            batch_size = 10
+            initial_roi = np.array([100, 130, 300, 400])
+            initial_roi = roi_preprocess(initial_roi)
+            # setup model
+            model = CAEOnesRoiVGG(initial_roi)
+            if on_gpu:
+                model.to_gpu()
+            optimizers = [O.Adam(), O.Adam()]
+            optimizers[0].setup(model.cae_ones1)
+            optimizers[1].setup(model.vgg2)
+            # load trained models
+            serializers.load_hdf5(os.path.join(here, 'cae_ones_model.h5'),
+                                  model.cae_ones1)
+            serializers.load_hdf5(os.path.join(here, 'vgg_model.h5'),
+                                  model.vgg2)
+            # load optimizers state
+            serializers.load_hdf5(os.path.join(here, 'cae_ones_optimizer.h5'),
+                                  optimizers[0])
+            serializers.load_hdf5(os.path.join(here, 'vgg_optimizer.h5'),
+                                  optimizers[1])
         else:
             sys.stderr.write('Unsupported model: {}\n'.format(args.model))
             sys.exit(1)
@@ -202,19 +255,31 @@ def main():
         # unsupervised
         if args.model == 'CAE':
             from apc_od.models import CAE
-            model = CAE()
             save_encoded = True
+            model = CAE()
+            if on_gpu:
+                model.to_gpu()
+            optimizers[0].setup(model)
         elif args.model == 'CAEOnes':
             from apc_od.models import CAEOnes
             model = CAEOnes()
+            if on_gpu:
+                model.to_gpu()
+            optimizers[0].setup(model)
         elif args.model == 'CAEPool':
             from apc_od.models import CAEPool
-            model = CAEPool()
             save_encoded = True
+            model = CAEPool()
+            if on_gpu:
+                model.to_gpu()
+            optimizers[0].setup(model)
         elif args.model == 'StackedCAE':
             from apc_od.models import StackedCAE
-            model = StackedCAE()
             save_encoded = True
+            model = StackedCAE()
+            if on_gpu:
+                model.to_gpu()
+            optimizers[0].setup(model)
         else:
             sys.stderr.write('Unsupported model: {}\n'.format(args.model))
             sys.exit(1)
@@ -240,12 +305,14 @@ def main():
     print(msg)
 
     trainer = Trainer(
+        optimizers=optimizers,
         model=model,
         is_supervised=is_supervised,
         crop_roi=crop_roi,
+        batch_size=batch_size,
         log_dir=log_dir,
         log_file=log_file,
-        on_gpu=True,
+        on_gpu=on_gpu,
     )
     trainer.main_loop(
         n_epoch=n_epoch,

@@ -64,6 +64,7 @@ class Trainer(object):
         sum_accuracy = 0 if self.is_supervised else None
         perm = np.random.permutation(N)
         for i in range(0, N, self.batch_size):
+            print('batch_loop: {}'.format(i))
             x_batch = x_data[perm[i:i + self.batch_size]]
             t_batch = t_data[perm[i:i + self.batch_size]]
             if self.on_gpu:
@@ -81,8 +82,11 @@ class Trainer(object):
             self.model.train = train
             if train:
                 losses = self.model(*inputs)
+                if losses is None:
+                    continue
                 if not isinstance(losses, collections.Sequence):
                     losses = [losses]
+                self.model.to_gpu()
                 for j, loss in enumerate(losses):
                     loss.backward()
                     self.optimizers[j].update()
@@ -90,10 +94,9 @@ class Trainer(object):
                 self.model(*inputs)
                 losses = [self.model.loss]
             for j, loss in enumerate(losses):
-                sum_loss[j] += self.batch_size * float(loss.data)
+                sum_loss[j] += len(t.data) * float(loss.data)
             if self.is_supervised:
-                sum_accuracy += \
-                    self.batch_size * float(self.model.accuracy.data)
+                sum_accuracy += len(t.data) * float(self.model.accuracy.data)
         y_data = self.model.y.data
         if self.on_gpu:
             x_batch = cuda.to_cpu(x_batch)

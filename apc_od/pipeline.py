@@ -75,13 +75,13 @@ class CAEOnesRoiVGG(Pipeline):
         self.cae_ones1.to_cpu()
 
         self.vgg2.to_gpu()
-        min_y = None
         rands_shape = [self.learning_n_sample] + list(roi_scale.data.shape)
         rands = self.learning_rate * \
             (2 * np.random.random(rands_shape) - 1) + 1
         rands[0] = np.ones(roi_scale.data.shape)
         roi_scale_data = cuda.to_cpu(roi_scale.data) \
             if on_gpu else roi_scale.data
+        min_rand = None
         for i, rand in enumerate(rands):
             roi_scale_data_with_rand = rand * roi_scale_data
             roi_scale = Variable(roi_scale_data_with_rand,
@@ -92,14 +92,12 @@ class CAEOnesRoiVGG(Pipeline):
             self.vgg2(x1, t)
             h = self.vgg2.y
             loss = F.softmax_cross_entropy(h, t)
-            if min_y is None:
-                min_loss_data = float(loss.data)
-                min_y = h
+            if min_rand is None:
                 min_rand = rand
+                min_loss_data = float(loss.data)
             elif min_loss_data > float(loss.data):
-                min_loss_data = float(loss.data)
-                min_y = h
                 min_rand = rand
+                min_loss_data = float(loss.data)
         self.vgg2.to_cpu()
 
         # DEBUG
@@ -111,9 +109,12 @@ class CAEOnesRoiVGG(Pipeline):
         #     im = im[roi[0]:roi[2], roi[1]:roi[3]]
         #     imsave('{}/{}.jpg'.format(timestamp, i), im)
 
+        if min_rand is None:
+            # no minimum randomness is found, so regress to ones
+            min_rand = np.ones(roi_scale.data.shape)
+
         # convert from xp.ndarray to chainer.Variable
         roi_scale_data_with_rand = min_rand * roi_scale.data
-        print(roi_scale_data_with_rand * self.initial_roi)
         roi_scale_data_with_rand = roi_scale_data_with_rand.astype(np.float32)
         if on_gpu:
             roi_scale_data_with_rand = cuda.to_gpu(roi_scale_data_with_rand)

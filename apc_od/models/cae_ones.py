@@ -56,8 +56,8 @@ class CAEOnes(chainer.Chain):
         # linears
         h = self.linear1_1(h)
         h = self.linear1_2(h)
-        z = h
-        return z
+        self.z = h
+        return self.z
 
     def decode(self, z):
         h = z
@@ -74,5 +74,5 @@ class CAEOnes(chainer.Chain):
         # deconv2_2
         self.deconv2_2.outsize = self.conv1_1_inshape[-2:]
         h = self.deconv2_2(h)
-        y = h
-        return y
+        self.y = h
+        return self.y

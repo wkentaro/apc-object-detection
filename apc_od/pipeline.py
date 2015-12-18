@@ -26,7 +26,7 @@ class CAEOnesRoiVGG(Pipeline):
             self,
             initial_roi,
             learning_rate=0.1,
-            learning_n_sample=100
+            learning_n_sample=1000
             ):
         super(CAEOnesRoiVGG, self).__init__(
             cae_ones1=CAEOnes(),
@@ -70,8 +70,11 @@ class CAEOnesRoiVGG(Pipeline):
         """
         on_gpu = isinstance(x.data, cupy.ndarray)
 
+        self.cae_ones1.to_gpu()
         roi_scale = self.cae_ones1.encode(x)
+        self.cae_ones1.to_cpu()
 
+        self.vgg2.to_gpu()
         min_y = None
         rands_shape = [self.learning_n_sample] + list(roi_scale.data.shape)
         rands = self.learning_rate * \
@@ -97,6 +100,7 @@ class CAEOnesRoiVGG(Pipeline):
                 min_loss_data = float(loss.data)
                 min_y = h
                 min_rand = rand
+        self.vgg2.to_cpu()
 
         # DEBUG
         # from skimage.io import imsave
@@ -109,6 +113,7 @@ class CAEOnesRoiVGG(Pipeline):
 
         # convert from xp.ndarray to chainer.Variable
         roi_scale_data_with_rand = min_rand * roi_scale.data
+        print(roi_scale_data_with_rand * self.initial_roi)
         roi_scale_data_with_rand = roi_scale_data_with_rand.astype(np.float32)
         if on_gpu:
             roi_scale_data_with_rand = cuda.to_gpu(roi_scale_data_with_rand)
@@ -123,15 +128,21 @@ class CAEOnesRoiVGG(Pipeline):
         self.cae_ones1.train = self.train
         self.vgg2.train = self.train
 
-        roi_scale = self.cae_ones1.encode(x)
+        self.cae_ones1.to_cpu()
+        self.vgg2.to_cpu()
 
         # just use as regression
         if t is None:
             # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
             # testing fase
             # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+            self.cae_ones1.to_gpu()
+            roi_scale = self.cae_ones1.encode(x)
+            self.cae_ones1.to_cpu()
             x1 = self.x0_to_x1(x0=x, roi_scale=roi_scale)
+            self.vgg2.to_gpu()
             self.vgg2(x1)
+            self.vgg2.to_cpu()
             self.y = self.vgg2.y
             return self.y
 
@@ -140,10 +151,13 @@ class CAEOnesRoiVGG(Pipeline):
         # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         # estimate better parameters
         t0, x1 = self.random_sample(x, t)
+        if x1 is None:
+            return
         # optimize roi parameter to be better
-        z = self.cae_ones1.encode(x)
+        z = self.cae_ones1.z
         loss1 = F.mean_squared_error(z, t0)
         # optimize regression parameter to be better
+        self.vgg2.to_gpu()
         loss2 = self.vgg2(x1, t)
 
         self.accuracy = self.vgg2.accuracy

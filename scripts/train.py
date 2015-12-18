@@ -64,7 +64,6 @@ class Trainer(object):
         sum_accuracy = 0 if self.is_supervised else None
         perm = np.random.permutation(N)
         for i in range(0, N, self.batch_size):
-            print('batch_loop: {}'.format(i))
             x_batch = x_data[perm[i:i + self.batch_size]]
             t_batch = t_data[perm[i:i + self.batch_size]]
             if self.on_gpu:
@@ -132,20 +131,22 @@ class Trainer(object):
             # train
             sum_loss, sum_accuracy, _, _ = \
                 self.batch_loop(train_x, train_t, train=True)
-            mean_loss = sum_loss / N_train
-            msg = 'epoch:{:02d}; train mean loss={};'.format(epoch, mean_loss)
-            if self.is_supervised:
-                mean_accuracy = sum_accuracy / N_train
-                msg += ' accuracy={};'.format(mean_accuracy)
-            logging.info(msg)
-            print(msg)
+            for loss_id, sl in sorted(sum_loss.items()):
+                mean_loss = sl / N_train
+                msg = 'epoch:{:02d}; train mean loss{}={};'\
+                    .format(epoch, loss_id, mean_loss)
+                if self.is_supervised:
+                    mean_accuracy = sum_accuracy / N_train
+                    msg += ' accuracy={};'.format(mean_accuracy)
+                logging.info(msg)
+                print(msg)
             # test
             sum_loss, sum_accuracy, x_batch, y_batch = \
                 self.batch_loop(test_x, test_t, train=False)
             for loss_id, sl in sorted(sum_loss.items()):
                 mean_loss = sl / N_test
                 msg = 'epoch:{:02d}; test mean loss{}={};'\
-                    .format(loss_id, epoch, mean_loss)
+                    .format(epoch, loss_id, mean_loss)
                 if self.is_supervised:
                     mean_accuracy = sum_accuracy / N_test
                     msg += ' accuracy={};'.format(mean_accuracy)

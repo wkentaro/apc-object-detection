@@ -111,17 +111,21 @@ class CAEOnesRoiVGG(Pipeline):
 
         if min_rand is None:
             # no minimum randomness is found, so regress to ones
-            min_rand = np.ones(roi_scale.data.shape)
-
-        # convert from xp.ndarray to chainer.Variable
-        roi_scale_data_with_rand = min_rand * roi_scale.data
-        roi_scale_data_with_rand = roi_scale_data_with_rand.astype(np.float32)
-        if on_gpu:
-            roi_scale_data_with_rand = cuda.to_gpu(roi_scale_data_with_rand)
-        roi_scale = Variable(roi_scale_data_with_rand, volatile=not self.train)
+            roi_scale_data = np.ones(roi_scale.data.shape, dtype=np.float32)
+            if on_gpu:
+                roi_scale_data = cuda.to_gpu(roi_scale_data)
+        else:
+            # convert from xp.ndarray to chainer.Variable
+            roi_scale_data = min_rand * roi_scale_data
+            roi_scale_data = roi_scale_data.astype(np.float32)
+            if on_gpu:
+                roi_scale_data = cuda.to_gpu(roi_scale_data)
+        roi_scale = Variable(roi_scale_data, volatile=not self.train)
         t0 = roi_scale
 
         x1 = self.x0_to_x1(x0=x, roi_scale=roi_scale)
+        if x1 is None:
+            import ipdb; ipdb.set_trace()
 
         return t0, x1
 
@@ -152,13 +156,12 @@ class CAEOnesRoiVGG(Pipeline):
         # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         # estimate better parameters
         t0, x1 = self.random_sample(x, t)
-        if x1 is None:
-            return
         # optimize roi parameter to be better
         z = self.cae_ones1.z
         loss1 = F.mean_squared_error(z, t0)
         # optimize regression parameter to be better
         self.vgg2.to_gpu()
+        self.y = self.vgg2.y
         loss2 = self.vgg2(x1, t)
 
         self.accuracy = self.vgg2.accuracy

@@ -47,20 +47,28 @@ def draw_loss_curve(loss_id, logfile, outfile, no_acc):
             continue
         epoch = int(re.search('epoch:([0-9]+?);', line).groups()[0])
         if 'train' in line:
-            tr_l = float(re.search('loss{}=(.+?);'.format(loss_id), line)
-                         .groups()[0])
+            res = re.search('loss{}=(.+?);'.format(loss_id), line)
+            if res is None:
+                continue
+            tr_l = float(res.groups()[0])
             train_loss.append([epoch, tr_l])
             if not no_acc:
-                tr_a = float(re.search('accuracy=([0-9\.]+?);', line)
-                             .groups()[0])
+                res = re.search('accuracy=([0-9\.]+?);', line)
+                if res is None:
+                    continue
+                tr_a = float(res.groups()[0])
                 train_acc.append([epoch, tr_a])
-        if 'test' in line:
-            te_l = float(re.search('loss{}=(.+?);'.format(loss_id), line)
-                         .groups()[0])
+        elif 'test' in line:
+            res = re.search('loss{}=(.+?);'.format(loss_id), line)
+            if res is None:
+                continue
+            te_l = float(res.groups()[0])
             test_loss.append([epoch, te_l])
             if not no_acc:
-                te_a = float(re.search('accuracy=([0-9\.]+?);', line)
-                             .groups()[0])
+                res = re.search('accuracy=([0-9\.]+?);', line)
+                if res is None:
+                    continue
+                te_a = float(res.groups()[0])
                 test_acc.append([epoch, te_a])
 
     train_loss = np.asarray(train_loss)

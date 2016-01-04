@@ -7,7 +7,7 @@ from apc_od import draw_loss_curve
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-n', '--id-num', default=1, type=int,
+    parser.add_argument('-n', '--id-num', type=int, required=True,
                         help='number of loss id')
     parser.add_argument('--log-file', type=str, required=True,
                         help='log filename')

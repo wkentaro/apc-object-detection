@@ -41,6 +41,7 @@ class Trainer(object):
             self,
             optimizers,
             model,
+            model_name,
             is_supervised,
             crop_roi,
             batch_size,
@@ -50,6 +51,7 @@ class Trainer(object):
             ):
         self.optimizers = optimizers
         self.model = model
+        self.model_name = model_name
         self.is_supervised = is_supervised
         self.crop_roi = crop_roi
         self.batch_size = batch_size
@@ -161,14 +163,14 @@ class Trainer(object):
                 model_path = osp.join(
                     self.log_dir,
                     '{name}_model_{epoch}.h5'.format(
-                        name=self.model.__str__(), epoch=epoch))
+                        name=self.model_name, epoch=epoch))
                 serializers.save_hdf5(model_path, self.model)
                 # save optimizer
                 for i, opt in enumerate(self.optimizers):
                     opt_path = osp.join(
                         self.log_dir,
                         '{name}_optimizer_{epoch}_{i}.h5'.format(
-                            name=self.model.__str__(), epoch=epoch, i=i))
+                            name=self.model_name, epoch=epoch, i=i))
                     serializers.save_hdf5(opt_path, opt)
                 # save x_data
                 x_path = osp.join(self.log_dir, 'x_{}.pkl'.format(epoch))
@@ -313,6 +315,7 @@ def main():
     trainer = Trainer(
         optimizers=optimizers,
         model=model,
+        model_name=args.model,
         is_supervised=is_supervised,
         crop_roi=crop_roi,
         batch_size=batch_size,

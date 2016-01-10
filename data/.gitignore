@@ -1,3 +1,5 @@
 mask/
 raw_train/
 raw_test/
+inbin_depth_train/
+inbin_depth_test/

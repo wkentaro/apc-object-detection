@@ -21,6 +21,7 @@ roi_preprocess = apc_od.data.roi_preprocess
 
 
 get_raw = apc_od.dataset.get_raw
+get_inbin_depth = apc_od.dataset.get_inbin_depth
 raw_to_mask_path = apc_od.dataset.raw_to_mask_path
 
 

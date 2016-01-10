@@ -17,6 +17,15 @@ def get_raw(which_set):
     return data
 
 
+def get_inbin_depth(which_set):
+    if which_set not in ('train', 'test'):
+        raise ValueError
+
+    data_dir = os.path.join(here, '../data/inbin_depth_{0}'.format(which_set))
+    data = load_files(data_dir, load_content=False, shuffle=False)
+    return data
+
+
 def raw_to_mask_path(raw_path):
     raw_path = os.path.realpath(raw_path)
     raw_path = raw_path.split('/')

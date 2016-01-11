@@ -11,13 +11,13 @@ from chainer import Variable
 class CAEOnes(chainer.Chain):
     """Convolutional Autoencoder for Ones"""
 
-    def __init__(self, linear_size=11616):
+    def __init__(self, linear_size=11616, n_param=4):
         super(CAEOnes, self).__init__(
             conv1_1=L.Convolution2D(3, 8, 3, stride=2, pad=1),
             conv1_2=L.Convolution2D(8, 16, 3, stride=2, pad=1),
             linear1_1=L.Linear(linear_size, 4096),
-            linear1_2=L.Linear(4096, 4),
-            linear2_1=L.Linear(4, 4096),
+            linear1_2=L.Linear(4096, n_param),
+            linear2_1=L.Linear(n_param, 4096),
             linear2_2=L.Linear(4096, linear_size),
             deconv2_1=L.Deconvolution2D(16, 8, 3, stride=2, pad=1),
             deconv2_2=L.Deconvolution2D(8, 3, 3, stride=2, pad=1),

@@ -35,14 +35,15 @@ from apc_od import tile_ae_inout
 
 here = osp.dirname(osp.abspath(__file__))
 timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+save_dir = 'test_result_' + timestamp
+os.mkdir(save_dir)
 
 
-def save_roi_applied(imgs, rois):
-    save_dir = 'roi_applied_{}'.format(timestamp)
-    os.mkdir(save_dir)
+def save_roi_applied(imgs, rois, name):
     for i, (img, roi) in enumerate(zip(imgs, rois)):
         roi_img = img[roi[0]:roi[2], roi[1]:roi[3]]
-        imsave('{dir}/{i_img}.jpg'.format(dir=save_dir, i_img=i))
+        roi_img = roi_img.astype(np.uint8)
+        imsave('{dir}/{i_img}_{name}.jpg'.format(dir=save_dir, i_img=i, name=name), roi_img)
 
 
 def test_cae_ones_roi_vgg():
@@ -50,6 +51,8 @@ def test_cae_ones_roi_vgg():
     initial_roi = np.array([100, 130, 300, 400])
     initial_roi = roi_preprocess(initial_roi)
     model = CAEOnesRoiVGG(initial_roi)
+    model.train = False
+    model.cae_ones1.train = False
     serializers.load_hdf5(os.path.join(here, 'cae_ones_roi_vgg_model.h5'), model)
     dataset = get_raw('test')
     x1_data = []
@@ -69,9 +72,9 @@ def test_cae_ones_roi_vgg():
     roi_scale = roi_scale.data
 
     rois_before = np.ones_like(roi_scale) * initial_roi
-    save_roi_applied(raw_imgs, rois_before)
+    save_roi_applied(raw_imgs, rois_before, name='rois_before')
     rois_after = roi_scale * initial_roi
-    save_roi_applied(raw_imgs, rois_after)
+    save_roi_applied(raw_imgs, rois_after, name='rois_after')
 
 
 def main():

@@ -267,7 +267,7 @@ def main():
             optimizers[0].setup(model)
         elif args.model == 'CAEOnes':
             from apc_od.models import CAEOnes
-            model = CAEOnes()
+            model = CAEOnes(n_param=1)
             if on_gpu:
                 model.to_gpu()
             optimizers[0].setup(model)

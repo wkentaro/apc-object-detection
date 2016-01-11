@@ -237,10 +237,11 @@ def main():
             from apc_od.pipeline import CAEOnesRoiVGG
             is_pipeline = True
             batch_size = 10
-            initial_roi = np.array([100, 130, 300, 400])
+            initial_roi = np.array([0, 0, 356, 534])
+            logging.info('initial_roi: {}'.format(initial_roi))
             initial_roi = roi_preprocess(initial_roi)
             # setup model
-            model = CAEOnesRoiVGG(initial_roi)
+            model = CAEOnesRoiVGG(initial_roi=initial_roi, learning_rate=0.2, learning_n_sample=300)
             if on_gpu:
                 model.to_gpu()
             optimizers = [O.Adam(), O.Adam()]

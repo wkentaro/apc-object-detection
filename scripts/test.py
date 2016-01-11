@@ -42,6 +42,8 @@ os.mkdir(save_dir)
 def save_roi_applied(imgs, rois, name):
     for i, (img, roi) in enumerate(zip(imgs, rois)):
         roi_img = img[roi[0]:roi[2], roi[1]:roi[3]]
+        if roi_img.size == 0:
+            continue
         roi_img = roi_img.astype(np.uint8)
         imsave('{dir}/{i_img}_{name}.jpg'.format(dir=save_dir, i_img=i, name=name), roi_img)
 

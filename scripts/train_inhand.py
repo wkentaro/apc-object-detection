@@ -34,7 +34,8 @@ from apc_od import tile_ae_inout
 
 
 def get_inhand_mask(which_set):
-    return glob.glob('../data/inhand_mask_{}/*.jpg'.format(which_set))
+    from sklearn.datasets import load_files
+    return load_files('../data/inhand_mask_{}'.format(which_set), load_content=False)
 
 
 here = osp.dirname(osp.abspath(__file__))
@@ -272,7 +273,7 @@ def main():
             optimizers[0].setup(model)
         elif args.model == 'CAEOnes':
             from apc_od.models import CAEOnes
-            model = CAEOnes(n_param=1)
+            model = CAEOnes(n_param=2)
             if on_gpu:
                 model.to_gpu()
             optimizers[0].setup(model)

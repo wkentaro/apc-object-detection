@@ -4,6 +4,7 @@
 from __future__ import division
 import argparse
 import os
+import logging
 
 from chainer import functions as F
 from chainer import optimizers as O
@@ -20,6 +21,14 @@ from sensor_msgs.msg import Image
 
 import apc_od
 from apc_od.models import CAEOnes
+
+
+log_file = 'log.txt'
+
+
+def write_log(msg):
+    with open(log_file, 'a') as f:
+        f.write(msg)
 
 
 class TrainInBinReconfig(object):
@@ -102,11 +111,7 @@ class TrainInBinReconfig(object):
         t = Variable(t_data, volatile='off')
         loss = F.mean_squared_error(z, t)
         loss.backward()
-
-    def main(self, n_epoch=10):
-        for epoch in xrange(n_epoch):
-            print(epoch)
-            self.random_sample()
+        return float(loss.data)
 
 
 if __name__ == '__main__':
@@ -125,22 +130,53 @@ if __name__ == '__main__':
     print('done loading')
 
     directory = args.container_dir
-    for i in xrange(1, 6):
+    import datetime as dt
+    for epoch in xrange(10):
+        sum_loss = 0
+        for i in xrange(1, 5):
+            while True:
+                yn = raw_input('Next is {}, can go? [y/n]: '.format(i))
+                if yn.lower() == 'y':
+                    break
+            depth_file = os.path.join(directory, str(i), 'depth.jpg')
+            diffmask_file = os.path.join(directory, str(i), 'diffmask2.jpg')
+
+            depth = cv2.imread(depth_file)
+            mask = cv2.imread(diffmask_file, 0)
+            depth = resize(depth, (267, 178), preserve_range=True)
+            x_data = np.array([apc_od.im_to_blob(depth)], dtype=np.float32)
+            x = Variable(x_data, volatile='off')
+
+            trainer = TrainInBinReconfig(
+                model=model, optimizer=optimizer, x=x, mask=mask)
+            loss_data = trainer.random_sample()
+            sum_loss += loss_data
+        mean_loss = 1. * sum_loss / 5
+        msg = 'epoch:{:02d}; train mean loss0={};'.format(epoch, mean_loss)
+        write_log(msg)
+
+        # test
         while True:
-            yn = raw_input('Next is {}, can go? [y/n]: '.format(i))
+            yn = raw_input('Next is {}, can go? [y/n]: '.format(5))
             if yn.lower() == 'y':
                 break
-        depth_file = os.path.join(directory, str(i), 'depth.jpg')
-        diffmask_file = os.path.join(directory, str(i), 'diffmask.jpg')
-
+        depth_file = os.path.join(directory, str(5), 'depth.jpg')
+        diffmask_file = os.path.join(directory, str(5), 'diffmask.jpg')
         depth = cv2.imread(depth_file)
         mask = cv2.imread(diffmask_file, 0)
         depth = resize(depth, (267, 178), preserve_range=True)
         x_data = np.array([apc_od.im_to_blob(depth)], dtype=np.float32)
-        x = Variable(x_data, volatile='off')
+        x = Variable(x_data, volatile='on')
+        trainer = TrainInBinReconfig(model=model, optimizer=optimizer,
+                                     x=x, mask=mask)
+        model.train = False
+        param_scale = model.encode(x).data
+        params = (trainer.initial_param * param_scale)[0]
+        tolerance = params[0]
+        trainer.reconfigure(tolerance=tolerance)
+        val = trainer.evaluate()
+        msg = 'epoch:{:02d}; test mean loss0={};'.format(epoch, val)
+        write_log(msg)
 
-        trainer = TrainInBinReconfig(
-            model=model, optimizer=optimizer, x=x, mask=mask)
-        trainer.main()
     S.save_hdf5('cae_ones_model_inbin_trained.h5', model)
     S.save_hdf5('cae_ones_optimizer_inbin_trained.h5', optimizer)

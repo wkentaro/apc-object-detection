@@ -3,3 +3,7 @@ raw_train/
 raw_test/
 inbin_depth_train/
 inbin_depth_test/
+in_hand_recog_train/
+in_hand_recog_test/
+inhand_mask_train/
+inhand_mask_test/

@@ -3,6 +3,7 @@
 
 from __future__ import division
 import argparse
+import glob
 import os
 import logging
 
@@ -18,26 +19,35 @@ import cv_bridge
 import dynamic_reconfigure.client
 import rospy
 from sensor_msgs.msg import Image
+from pcl_ros.srv import UpdateFilename
+from pcl_ros.srv import UpdateFilenameRequest
 
 import apc_od
 from apc_od.models import CAEOnes
 
-
-log_file = 'log.txt'
-
+log_file = 'log_inbin_reconfig.txt'
 
 def write_log(msg):
     with open(log_file, 'a') as f:
-        f.write(msg)
+        f.write(msg + '\n')
+
+
+def save_label_and_img(fname, label, img):
+    from skimage.color import label2rgb
+    from skimage.io import imsave
+    rgb = label2rgb(label=label, image=img, bg_label=0)
+    imsave(fname, rgb)
 
 
 class TrainInBinReconfig(object):
 
-    def __init__(self, model, optimizer, x, mask):
+    def __init__(self, model, optimizer, x, mask, image, all_mask):
         self.model = model
         self.optimizer = optimizer
         self.x = x
         self.mask = mask
+        self.image = image
+        self.all_mask = (all_mask > 127).astype(int)
         self.initial_param = np.array([0.02])
 
         self.label_msg = None
@@ -64,58 +74,72 @@ class TrainInBinReconfig(object):
         label_msg = self.label_msg
         bridge = cv_bridge.CvBridge()
         label = bridge.imgmsg_to_cv2(label_msg)
-        val = self.evaluate_label(label, mask)
-        return val
+        val = self.evaluate_label(label, self.mask)
+        return val, label
 
-    def evaluate_label(self, label, mask, bg_label=0):
+    def evaluate_label(self, label, mask):
         """Evaluate diff between label and mask"""
         unique_labels = np.unique(label)
-        print(unique_labels)
         min_val = np.inf
         mask = (mask > 127).astype(int)
-        img_size = mask.size
         for l in unique_labels:
-            if l == bg_label:
-                continue
             label_mask = (label == l).astype(int)
-            val = 1. * np.sum(np.abs(label_mask - mask)) / img_size
-            print(val)
+            val = 1. * np.sum(np.abs(label_mask - mask)) / self.all_mask.sum()
             if val < min_val:
                 min_val = val
         return min_val
 
-    def random_sample(self):
+    def random_sample(self, fname, epoch):
         learning_rate = 1
-        learning_n_sample = 50
+        learning_n_sample = 30
 
         self.model.train = True
         z = self.model.encode(self.x)
         param_scale = z.data
 
+        self.optimizer.zero_grads()
         rands_shape = [learning_n_sample] + list(param_scale.shape)
-        rands = learning_rate * (2 * np.random.random(rands_shape) - 1) + 1
+        rands = 1. * learning_rate * (21 - epoch) / 20 * (2 * np.random.random(rands_shape) - 1) + 1
         rands[0] = np.ones(param_scale.shape)  # ones
+        min_label = None
         min_value = np.inf
+        min_rand = None
         for i, rand in enumerate(rands):
             param_scale_with_rand = rand * param_scale
             params = (self.initial_param * param_scale_with_rand)[0]
-            print('tolerance: ', params[0])
+            if params[0] < 0.0009:
+                min_rand = 1. / param_scale
+                params[0] = self.initial_param[0]
+                self.reconfigure(tolerance=params[0])
+                min_value, min_label = self.evaluate()
+                if params[0] < 0:
+                    break
+                else:
+                    continue
             self.reconfigure(tolerance=params[0])
-            val = self.evaluate()
-            print('eval value: ', val)
+            val, label = self.evaluate()
             if val < min_value:
+                min_label = label
                 min_value = val
                 min_rand = rand
+        if min_rand is None:
+            return np.inf, -np.inf
+        save_label_and_img(fname, min_label, self.image)
         t_data = (min_rand * param_scale).astype(np.float32)
-        print('t_data: ', t_data)
+        print('unique_labels: {}, param_scale: {} -> t_data: {}, min_value: {}'.format(np.unique(min_label), param_scale, t_data, min_value))
         t = Variable(t_data, volatile='off')
         loss = F.mean_squared_error(z, t)
         loss.backward()
-        return float(loss.data)
+        self.optimizer.update()
+        accuracy = 1. - min_value
+        return float(loss.data), accuracy
 
 
-if __name__ == '__main__':
+def main():
     rospy.init_node('train_inbin_reconfig')
+
+    update_filename_client = rospy.ServiceProxy(
+        'pcd_to_pointcloud/update_filename', UpdateFilename)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('container_dir')
@@ -130,57 +154,120 @@ if __name__ == '__main__':
     print('done loading')
 
     directory = args.container_dir
-    import datetime as dt
-    for epoch in xrange(10):
+
+    # test
+    epoch = 0
+    sum_acc = 0
+    for i in [4, 5]:
+        pcd_file = os.path.realpath(glob.glob('{}/{}/*.pcd'.format(directory, i))[0])
+        req = UpdateFilenameRequest(filename=pcd_file)
+        res = update_filename_client(req)
+        print('update_filename to: {}, success: {}'
+              .format(pcd_file, res.success))
+
+        image_file = os.path.join(directory, str(i), 'image.jpg')
+        depth_file = os.path.join(directory, str(i), 'depth.jpg')
+        all_mask_file = os.path.join(directory, str(i), 'mask.jpg')
+        diffmask_file = os.path.join(directory, str(i), 'diffmask2.jpg')
+        image = cv2.imread(image_file)
+        depth = cv2.imread(depth_file)
+        all_mask = cv2.imread(all_mask_file, 0)
+        mask = cv2.imread(diffmask_file, 0)
+        depth = resize(depth, (267, 178), preserve_range=True)
+        x_data = np.array([apc_od.im_to_blob(depth)], dtype=np.float32)
+        x = Variable(x_data, volatile='on')
+        trainer = TrainInBinReconfig(model=model, optimizer=optimizer,
+                                     x=x, mask=mask, image=image, all_mask=all_mask)
+        model.train = False
+        param_scale = model.encode(x).data
+        params = (trainer.initial_param * param_scale)[0]
+        tolerance = params[0]
+        if params[0] < 0.0009:
+            params[0] = trainer.initial_param[0]
+            trainer.reconfigure(tolerance=params[0])
+        trainer.reconfigure(tolerance=tolerance)
+        val, label = trainer.evaluate()
+        save_label_and_img('{}_{}.jpg'.format(i, epoch), label, image)
+        sum_acc += (1. - val)
+    mean_acc = sum_acc / 2.
+    msg = 'epoch:{:02d}; test mean accuracy0={};'.format(epoch, mean_acc)
+    write_log(msg)
+
+    for epoch in xrange(1, 21):
         sum_loss = 0
+        sum_acc = 0
         for i in [1, 2, 3]:
-            while True:
-                yn = raw_input('Next is {}, can go? [y/n]: '.format(i))
-                if yn.lower() == 'y':
-                    break
+            pcd_file = os.path.realpath(glob.glob('{}/{}/*.pcd'.format(directory, i))[0])
+            req = UpdateFilenameRequest(filename=pcd_file)
+            res = update_filename_client(req)
+            print('update_filename to: {}, success: {}'
+                  .format(pcd_file, res.success))
+
+            image_file = os.path.join(directory, str(i), 'image.jpg')
             depth_file = os.path.join(directory, str(i), 'depth.jpg')
+            all_mask_file = os.path.join(directory, str(i), 'mask.jpg')
             diffmask_file = os.path.join(directory, str(i), 'diffmask2.jpg')
 
+            image = cv2.imread(image_file)
             depth = cv2.imread(depth_file)
+            all_mask = cv2.imread(all_mask_file, 0)
             mask = cv2.imread(diffmask_file, 0)
             depth = resize(depth, (267, 178), preserve_range=True)
             x_data = np.array([apc_od.im_to_blob(depth)], dtype=np.float32)
             x = Variable(x_data, volatile='off')
 
             trainer = TrainInBinReconfig(
-                model=model, optimizer=optimizer, x=x, mask=mask)
-            loss_data = trainer.random_sample()
+                model=model, optimizer=optimizer, x=x, mask=mask, image=image, all_mask=all_mask)
+            model.train = True
+            loss_data, acc = trainer.random_sample(fname='{}_{}.jpg'.format(i, epoch), epoch=epoch)
             sum_loss += loss_data
+            sum_acc += acc
         mean_loss = sum_loss / 3.
+        mean_acc = sum_acc / 3.
         msg = 'epoch:{:02d}; train mean loss0={};'.format(epoch, mean_loss)
+        write_log(msg)
+        msg = 'epoch:{:02d}; train mean accuracy0={};'.format(epoch, mean_acc)
         write_log(msg)
 
         # test
-        sum_loss = 0
+        sum_acc = 0
         for i in [4, 5]:
-            while True:
-                yn = raw_input('Next is {}, can go? [y/n]: '.format(i))
-                if yn.lower() == 'y':
-                    break
+            pcd_file = os.path.realpath(glob.glob('{}/{}/*.pcd'.format(directory, i))[0])
+            req = UpdateFilenameRequest(filename=pcd_file)
+            res = update_filename_client(req)
+            print('update_filename to: {}, success: {}'
+                  .format(pcd_file, res.success))
+
+            image_file = os.path.join(directory, str(i), 'image.jpg')
             depth_file = os.path.join(directory, str(i), 'depth.jpg')
+            all_mask_file = os.path.join(directory, str(i), 'mask.jpg')
             diffmask_file = os.path.join(directory, str(i), 'diffmask2.jpg')
+            image = cv2.imread(image_file)
             depth = cv2.imread(depth_file)
+            all_mask = cv2.imread(all_mask_file, 0)
             mask = cv2.imread(diffmask_file, 0)
             depth = resize(depth, (267, 178), preserve_range=True)
             x_data = np.array([apc_od.im_to_blob(depth)], dtype=np.float32)
             x = Variable(x_data, volatile='on')
             trainer = TrainInBinReconfig(model=model, optimizer=optimizer,
-                                        x=x, mask=mask)
+                                        x=x, mask=mask, image=image, all_mask=all_mask)
             model.train = False
             param_scale = model.encode(x).data
             params = (trainer.initial_param * param_scale)[0]
+            if params[0] < 0.0009:
+                params[0] = trainer.initial_param[0]
             tolerance = params[0]
             trainer.reconfigure(tolerance=tolerance)
-            loss = trainer.evaluate()
-            sum_loss += loss
-        mean_loss = sum_loss / 2.
-        msg = 'epoch:{:02d}; test mean loss0={};'.format(epoch, mean_loss)
+            val, label = trainer.evaluate()
+            save_label_and_img('{}_{}.jpg'.format(i, epoch), label, image)
+            sum_acc += (1. - val)
+        mean_acc = sum_acc / 2.
+        msg = 'epoch:{:02d}; test mean accuracy0={};'.format(epoch, mean_acc)
         write_log(msg)
 
     S.save_hdf5('cae_ones_model_inbin_trained.h5', model)
     S.save_hdf5('cae_ones_optimizer_inbin_trained.h5', optimizer)
+
+
+if __name__ == '__main__':
+    main()

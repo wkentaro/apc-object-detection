@@ -26,7 +26,6 @@ class CAEOnes(chainer.Chain):
         self.z = None
         self.y = None
         self.loss = None
-        self.pool1_outshape = None
 
     def __call__(self, x):
         # encode
@@ -45,16 +44,16 @@ class CAEOnes(chainer.Chain):
         h = x
         # conv1_1
         self.conv1_1_inshape = h.data.shape
-        h = self.conv1_1(h)
+        h = F.relu(self.conv1_1(h))
         # conv1_2
         self.conv1_2_inshape = h.data.shape
-        h = self.conv1_2(h)
+        h = F.relu(self.conv1_2(h))
         # pool1
         self.pool1_inshape = h.data.shape
         h = F.max_pooling_2d(h, ksize=3, stride=2)
         self.pool1_outshape = h.data.shape
         # linears
-        h = self.linear1_1(h)
+        h = F.relu(self.linear1_1(h))
         h = self.linear1_2(h)
         self.z = h
         return self.z
@@ -63,16 +62,16 @@ class CAEOnes(chainer.Chain):
         h = z
         # linears
         h = self.linear2_1(h)
-        h = self.linear2_2(h)
+        h = F.relu(self.linear2_2(h))
         # unpool1
         h = F.reshape(h, self.pool1_outshape)
         h = F.unpooling_2d(h, ksize=3, stride=2,
                            outsize=self.pool1_inshape[-2:])
         # deconv2_1
         self.deconv2_1.outsize = self.conv1_2_inshape[-2:]
-        h = self.deconv2_1(h)
+        h = F.relu(self.deconv2_1(h))
         # deconv2_2
         self.deconv2_2.outsize = self.conv1_1_inshape[-2:]
-        h = self.deconv2_2(h)
+        h = F.relu(self.deconv2_2(h))
         self.y = h
         return self.y

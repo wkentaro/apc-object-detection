@@ -13,6 +13,7 @@ import cv2
 import numpy as np
 from sklearn.datasets import load_files
 from sklearn.preprocessing import normalize
+from sklearn.metrics import accuracy_score
 from skimage.morphology import closing, square
 from skimage.transform import resize
 
@@ -74,8 +75,9 @@ def main():
         mask = cv2.imread(mask_file)
         test_imgs.append((img, mask))
 
-    y_true = np.zeros(25, dtype=np.float32)
-    y_true[12] = 1
+    y_true_0 = 12
+    # y_proba_true_0 = np.zeros(25, dtype=np.float32)
+    # y_proba_true_0[12] = 1
 
 
 
@@ -86,13 +88,15 @@ def main():
     initial_params = [8, 4]  # size, iterations
     epoch = 0
     model.train = False
-    sum_error = 0
+    accuracies = []
     print('testing')
     N = len(test_imgs)
     perm = np.random.permutation(len(test_imgs))
     for i in xrange(0, N, n_batch):
         print('test_batch: ', i)
         test_batch = [test_imgs[p_index] for p_index in perm[i:i+n_batch]]
+        y_true = np.repeat([y_true_0], len(test_batch), axis=0)
+        # y_proba_true = np.repeat(y_proba_true_0, len(test_batch), axis=0)
         x_data = []
         for img, mask in test_batch:
             mask = resize(mask, (267, 178), preserve_range=True)
@@ -127,14 +131,14 @@ def main():
 
         X_trans = bof.transform(X)
         X_trans = normalize(X_trans)
-        y_proba = lgr.predict_proba(X_trans)[0]
-        square_error = np.sum(np.power(y_proba - y_true, 2))
-        sum_error += square_error
-    try:
-        mean_error = 1. * sum_error / N
-    except ZeroDivisionError:
-        mean_error = np.inf
-    msg = 'epoch:{:02d}; test mean loss1={};'.format(epoch, mean_error)
+        y_pred = lgr.predict(X_trans)
+        accuracy = accuracy_score(y_true, y_pred)
+        accuracies.append(accuracy)
+        # y_proba = lgr.predict_proba(X_trans)
+        # square_error = np.sum(np.power(y_proba - y_true, 2))
+        # sum_error += square_error
+    mean_accuracy = np.array(accuracy).mean()
+    msg = 'epoch:{:02d}; test mean accuracy={};'.format(epoch, mean_accuracy)
     write_log(msg)
     print(msg)
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -151,13 +155,15 @@ def main():
         # train
         model.train = True
         sum_loss = 0
-        sum_error = 0
+        accuracies = []
         N = len(train_imgs)
         N_train = len(train_imgs)
         perm = np.random.permutation(N_train)
         for i in range(0, N_train, n_batch):
             print('train_batch: ', i)
             train_batch = [train_imgs[p_index] for p_index in perm[i:i+n_batch]]
+            y_true = np.repeat([y_true_0], len(train_batch), axis=0)
+            # y_proba_true = np.repeat(y_proba_true_0, len(train_batch), axis=0)
             x_data = []
             for img, mask in train_batch:
                 mask = resize(mask, (267, 178), preserve_range=True)
@@ -170,7 +176,7 @@ def main():
             rands = 1. * learning_rate * (11 - epoch) / 11 * (2 * np.random.random(rands_shape) - 1) + 1
             rands[0] = np.ones(param_scale.shape)  # ones
             min_rand = None
-            min_error = np.inf
+            max_accuracy = -np.inf
             optimizer.zero_grads()
             for j, rand in enumerate(rands):
                 params = rand * param_scale * initial_params
@@ -190,10 +196,12 @@ def main():
                     continue
                 X_trans = bof.transform(X)
                 X_trans = normalize(X_trans)
-                y_proba = lgr.predict_proba(X_trans)[0]
-                square_error = 1. * np.sum(np.power(y_proba - y_true, 2)) / len(train_batch)
-                if square_error < min_error:
-                    min_error = square_error
+                y_pred = lgr.predict(X_trans)
+                accuracy = accuracy_score(y_true, y_pred)
+                # y_proba = lgr.predict_proba(X_trans)[0]
+                # square_error = 1. * np.sum(np.power(y_proba - y_true, 2)) / len(train_batch)
+                if accuracy > max_accuracy:
+                    max_accuracy = accuracy
                     min_rand = rand
             if min_rand is None:
                 print('train: skipping')
@@ -205,16 +213,16 @@ def main():
             loss.backward()
             optimizer.update()
             sum_loss += float(loss.data) * len(train_batch)
-            sum_error += min_error * len(train_batch)
+            accuracies.append(accuracy)
         try:
             mean_loss = 1. * sum_loss / N
         except ZeroDivisionError:
             mean_loss = np.inf
-        mean_error = 1. * sum_error / N
-        msg = 'epoch:{:02d}; train mean loss0={};'.format(epoch, mean_loss)
+        mean_accuracy = np.array(accuracies).mean()
+        msg = 'epoch:{:02d}; train mean loss={};'.format(epoch, mean_loss)
         write_log(msg)
         print(msg)
-        msg = 'epoch:{:02d}; train mean loss1={};'.format(epoch, mean_error)
+        msg = 'epoch:{:02d}; train mean accuracy={};'.format(epoch, mean_accuracy)
         write_log(msg)
         print(msg)
 
@@ -222,11 +230,13 @@ def main():
         model.train = False
         sum_error = 0
         print('testing')
+        accuracies = []
         N = len(test_imgs)
         perm = np.random.permutation(len(test_imgs))
         for i in xrange(0, N, n_batch):
             print('test_batch: ', i)
             test_batch = [test_imgs[p_index] for p_index in perm[i:i+n_batch]]
+            y_true = np.repeat([y_true_0], len(test_batch), axis=0)
             x_data = []
             for img, mask in test_batch:
                 mask = resize(mask, (267, 178), preserve_range=True)
@@ -261,14 +271,14 @@ def main():
 
             X_trans = bof.transform(X)
             X_trans = normalize(X_trans)
-            y_proba = lgr.predict_proba(X_trans)[0]
-            square_error = np.sum(np.power(y_proba - y_true, 2))
-            sum_error += square_error
-        try:
-            mean_error = 1. * sum_error / N
-        except ZeroDivisionError:
-            mean_error = np.inf
-        msg = 'epoch:{:02d}; test mean loss1={};'.format(epoch, mean_error)
+            y_pred = lgr.predict(X_trans)
+            accuracy = accuracy_score(y_true, y_pred)
+            accuracies.append(accuracy)
+            # y_proba = lgr.predict_proba(X_trans)[0]
+            # square_error = np.sum(np.power(y_proba - y_true, 2))
+            # sum_error += square_error
+        mean_accuracy = np.array(accuracies).mean()
+        msg = 'epoch:{:02d}; test mean accuracy={};'.format(epoch, mean_accuracy)
         write_log(msg)
         print(msg)
 

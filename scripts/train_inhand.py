@@ -94,7 +94,8 @@ class Trainer(object):
                     continue
                 if not isinstance(losses, collections.Sequence):
                     losses = [losses]
-                self.model.to_gpu()
+                if self.on_gpu:
+                    self.model.to_gpu()
                 for j, loss in enumerate(losses):
                     loss.backward()
                     self.optimizers[j].update()
@@ -188,7 +189,9 @@ class Trainer(object):
                         x_batch, y_batch,
                         osp.join(self.log_dir, 'X_{}.jpg'.format(epoch)))
                 if save_encoded:
-                    x = Variable(cuda.to_gpu(x_batch), volatile=True)
+                    if self.on_gpu:
+                        x_batch = cuda.to_gpu(x_batch)
+                    x = Variable(x_batch, volatile=True)
                     z = self.model.encode(x)
                     tile_ae_encoded(
                         cuda.to_cpu(z.data),
@@ -222,7 +225,7 @@ def main():
     save_interval = args.save_interval
     is_supervised = True if args.supervised_or_not == 'supervised' else False
 
-    on_gpu = True
+    on_gpu = False
     is_pipeline = False
     batch_size = 10
     save_encoded = False

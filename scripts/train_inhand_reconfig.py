@@ -4,7 +4,6 @@
 import cPickle as pickle
 import gzip
 import os
-import logging
 
 from chainer import Variable
 import chainer.functions as F
@@ -20,10 +19,11 @@ from skimage.transform import resize
 from jsk_recognition_utils import bounding_rect_of_mask
 from imagesift import get_sift_keypoints
 
-logging.basicConfig(
-    filename='log_train_inhand.txt',
-    level=logging.DEBUG,
-)
+
+def write_log(msg):
+    log_file = 'log_train_inhand.txt'
+    with open(log_file, 'a') as f:
+        f.write(msg + '\n')
 
 
 import apc_od
@@ -77,15 +77,81 @@ def main():
     y_true = np.zeros(25, dtype=np.float32)
     y_true[12] = 1
 
+
+
+
+    # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    # test
     n_batch = 10
-    learning_n_sample = 1000
+    initial_params = [8, 4]  # size, iterations
+    epoch = 0
+    model.train = False
+    sum_error = 0
+    print('testing')
+    N = len(test_imgs)
+    perm = np.random.permutation(len(test_imgs))
+    for i in xrange(0, N, n_batch):
+        print('test_batch: ', i)
+        test_batch = [test_imgs[p_index] for p_index in perm[i:i+n_batch]]
+        x_data = []
+        for img, mask in test_batch:
+            mask = resize(mask, (267, 178), preserve_range=True)
+            x_data.append(apc_od.im_to_blob(mask))
+        x_data = np.array(x_data, dtype=np.float32)
+        x = Variable(x_data, volatile='on')
+        z = model.encode(x)
+        param_scale = z.data
+        params = param_scale * initial_params
+
+        X = []
+        for k, param in enumerate(params):
+            size, iterations = map(int, param)
+            if size <= 0 or size > 50 or iterations <= 0 or iterations > 50:
+                rand = 1. * np.ones(2) / param_scale
+                params = rand * param_scale * initial_params
+                size, iterations = map(int, params[0])
+                print('test:', size, iterations)
+            if size <= 0 or size > 50 or iterations <= 0 or iterations > 50:
+                size, iterations = initial_params
+            kernel = np.ones((size, size), dtype=np.uint8)
+            img, mask = test_batch[k]
+            closed = cv2.morphologyEx(mask[:,:,0], cv2.MORPH_CLOSE, kernel, iterations=iterations)
+            cropped = bounding_rect_of_mask(img, closed)
+            frames, desc = get_sift_keypoints(cropped)
+            X.append(desc)
+        X = np.array(X)
+        if X.size == 0:
+            print('test: skipping')
+            N -= n_batch
+            continue
+
+        X_trans = bof.transform(X)
+        X_trans = normalize(X_trans)
+        y_proba = lgr.predict_proba(X_trans)[0]
+        square_error = np.sum(np.power(y_proba - y_true, 2))
+        sum_error += square_error
+    try:
+        mean_error = 1. * sum_error / N
+    except ZeroDivisionError:
+        mean_error = np.inf
+    msg = 'epoch:{:02d}; test mean loss1={};'.format(epoch, mean_error)
+    write_log(msg)
+    print(msg)
+    # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+    n_batch = 10
+    learning_n_sample = 100
     learning_rate = 0.1
     initial_params = [8, 4]  # size, iterations
-    for epoch in xrange(100):
+    for epoch in xrange(1, 11):
         print('epoch:', epoch)
         # train
         model.train = True
         sum_loss = 0
+        sum_error = 0
         N = len(train_imgs)
         N_train = len(train_imgs)
         perm = np.random.permutation(N_train)
@@ -101,23 +167,20 @@ def main():
             z = model.encode(x)
             param_scale = z.data
             rands_shape = [learning_n_sample] + list(param_scale.shape)
-            rands = learning_rate * (2 * np.random.random(rands_shape) - 1) + 1
+            rands = 1. * learning_rate * (11 - epoch) / 11 * (2 * np.random.random(rands_shape) - 1) + 1
             rands[0] = np.ones(param_scale.shape)  # ones
             min_rand = None
             min_error = np.inf
             optimizer.zero_grads()
             for j, rand in enumerate(rands):
                 params = rand * param_scale * initial_params
-                size, iterations = map(int, params[0])
-                print('j:', j, 'size:', size, 'iterations:', iterations)
-                if size <= 0 or size > 50 or iterations <= 0 or iterations > 50:
-                    rand = 1. * np.ones(2) / param_scale
-                    params = rand * param_scale * initial_params
-                    size, iterations = map(int, params[0])
-                print('j:', j, 'size:', size, 'iterations:', iterations)
-                kernel = np.ones((size, size), dtype=np.uint8)
                 X = []
-                for img, mask in train_batch:
+                for k, param in enumerate(params):
+                    size, iterations = map(int, param)
+                    if size <= 0 or size > 50 or iterations <= 0 or iterations > 50:
+                        size, iterations = initial_params
+                    kernel = np.ones((size, size), dtype=np.uint8)
+                    img, mask = train_batch[k]
                     closed = cv2.morphologyEx(mask[:,:,0], cv2.MORPH_CLOSE, kernel, iterations=iterations)
                     cropped = bounding_rect_of_mask(img, closed)
                     frames, desc = get_sift_keypoints(cropped)
@@ -128,7 +191,7 @@ def main():
                 X_trans = bof.transform(X)
                 X_trans = normalize(X_trans)
                 y_proba = lgr.predict_proba(X_trans)[0]
-                square_error = np.sum(np.power(y_proba - y_true, 2))
+                square_error = 1. * np.sum(np.power(y_proba - y_true, 2)) / len(train_batch)
                 if square_error < min_error:
                     min_error = square_error
                     min_rand = rand
@@ -142,17 +205,22 @@ def main():
             loss.backward()
             optimizer.update()
             sum_loss += float(loss.data) * len(train_batch)
+            sum_error += min_error * len(train_batch)
         try:
             mean_loss = 1. * sum_loss / N
         except ZeroDivisionError:
             mean_loss = np.inf
+        mean_error = 1. * sum_error / N
         msg = 'epoch:{:02d}; train mean loss0={};'.format(epoch, mean_loss)
-        logging.info(msg)
+        write_log(msg)
+        print(msg)
+        msg = 'epoch:{:02d}; train mean loss1={};'.format(epoch, mean_error)
+        write_log(msg)
         print(msg)
 
         # test
         model.train = False
-        sum_loss = 0
+        sum_error = 0
         print('testing')
         N = len(test_imgs)
         perm = np.random.permutation(len(test_imgs))
@@ -168,35 +236,44 @@ def main():
             z = model.encode(x)
             param_scale = z.data
             params = param_scale * initial_params
-            size, iterations = map(int, params[0])
-            if size <= 0 or size > 50 or iterations <= 0 or iterations > 50:
-                rand = 1. * np.ones(2) / param_scale
-                params = rand * param_scale * initial_params
-                size, iterations = map(int, params[0])
-            kernel = np.ones((size, size), dtype=np.uint8)
-            closed = cv2.morphologyEx(mask[:,:,0], cv2.MORPH_CLOSE, kernel, iterations=iterations)
-            cropped = bounding_rect_of_mask(img, closed)
-            frames, desc = get_sift_keypoints(cropped)
-            X = np.array([desc])
+
+            X = []
+            for k, param in enumerate(params):
+                size, iterations = map(int, param)
+                if size <= 0 or size > 50 or iterations <= 0 or iterations > 50:
+                    rand = 1. * np.ones(2) / param_scale
+                    params = rand * param_scale * initial_params
+                    size, iterations = map(int, params[0])
+                    print('test:', size, iterations)
+                if size <= 0 or size > 50 or iterations <= 0 or iterations > 50:
+                    size, iterations = initial_params
+                kernel = np.ones((size, size), dtype=np.uint8)
+                img, mask = test_batch[k]
+                closed = cv2.morphologyEx(mask[:,:,0], cv2.MORPH_CLOSE, kernel, iterations=iterations)
+                cropped = bounding_rect_of_mask(img, closed)
+                frames, desc = get_sift_keypoints(cropped)
+                X.append(desc)
+            X = np.array(X)
             if X.size == 0:
                 print('test: skipping')
                 N -= n_batch
                 continue
+
             X_trans = bof.transform(X)
             X_trans = normalize(X_trans)
             y_proba = lgr.predict_proba(X_trans)[0]
             square_error = np.sum(np.power(y_proba - y_true, 2))
-            sum_loss += square_error * len(test_batch)
+            sum_error += square_error
         try:
-            mean_loss = 1. * sum_loss / N
+            mean_error = 1. * sum_error / N
         except ZeroDivisionError:
-            mean_loss = np.inf
-        msg = 'epoch:{:02d}; test mean loss0={};'.format(epoch, mean_loss)
-        logging.info(msg)
+            mean_error = np.inf
+        msg = 'epoch:{:02d}; test mean loss1={};'.format(epoch, mean_error)
+        write_log(msg)
         print(msg)
 
-    S.save_hdf5('bof_data/cae_ones_model_trained.h5', model)
-    S.save_hdf5('bof_data/cae_ones_optimizer_trained.h5', optimizer)
+        S.save_hdf5('bof_data/cae_ones_model_trained_{}.h5'.format(epoch), model)
+        S.save_hdf5('bof_data/cae_ones_optimizer_trained_{}.h5'.format(epoch), optimizer)
 
 
 if __name__ == '__main__':
